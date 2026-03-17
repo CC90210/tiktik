@@ -5,6 +5,7 @@ import { Center, Teacher } from '@/lib/types'
 import { formatTime, formatDate, getDateString, getPayPeriodDates } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import TutorialOverlay from './TutorialOverlay'
+import FaceEnrollModal from './FaceEnrollModal'
 
 interface ClockEventRow {
   id: string
@@ -156,6 +157,7 @@ export default function AdminPage() {
   })
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [enrollingTeacher, setEnrollingTeacher] = useState<Teacher | null>(null)
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -934,6 +936,21 @@ export default function AdminPage() {
                           </div>
                         </div>
 
+                        {/* Enroll Face */}
+                        <button
+                          onClick={() => setEnrollingTeacher(teacher)}
+                          className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors flex-shrink-0 ${
+                            (teacher as Teacher & { face_descriptors?: unknown[] }).face_descriptors?.length
+                              ? 'bg-[#E8F8F5] text-[#00B894] hover:bg-[#D1F2EB]'
+                              : 'bg-[#FFF3E0] text-[#FF9F43] hover:bg-[#FFE8CC]'
+                          }`}
+                          aria-label={`Enroll face for ${teacher.name}`}
+                        >
+                          {(teacher as Teacher & { face_descriptors?: unknown[] }).face_descriptors?.length
+                            ? '🔓 Face Enrolled'
+                            : '📷 Enroll Face'}
+                        </button>
+
                         {/* Remove */}
                         <button
                           onClick={() => removeTeacher(teacher.id, teacher.name)}
@@ -1139,6 +1156,20 @@ export default function AdminPage() {
       {/* Tutorial */}
       {showTutorial && (
         <TutorialOverlay onComplete={completeTutorial} centerSlug={center.slug} />
+      )}
+
+      {/* Face Enrollment Modal */}
+      {enrollingTeacher && center && (
+        <FaceEnrollModal
+          teacher={enrollingTeacher}
+          centerId={center.id}
+          onComplete={() => {
+            setEnrollingTeacher(null)
+            fetchTeachers()
+            showToast(`${enrollingTeacher.name}'s face enrolled!`)
+          }}
+          onClose={() => setEnrollingTeacher(null)}
+        />
       )}
 
       <style jsx global>{`
