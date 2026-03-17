@@ -158,12 +158,26 @@ export default function CameraModal({ teacher, onCapture, onClose }: Props) {
                 <p className="text-white/70 mb-6">
                   Enable camera permissions in your device settings to clock in.
                 </p>
-                <button
-                  onClick={onClose}
-                  className="bg-white text-[#2D3436] px-8 py-3 rounded-full font-semibold text-lg hover:bg-white/90 transition-colors"
-                >
-                  Close
-                </button>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      // Clock in without photo for demo/fallback
+                      onCapture('')
+                      setCaptured(true)
+                      setTimeout(onClose, 2000)
+                    }}
+                    className="px-8 py-3 rounded-full font-semibold text-lg transition-colors text-white"
+                    style={{ backgroundColor: accentColor }}
+                  >
+                    {action === 'in' ? 'Clock In' : 'Clock Out'} Without Photo
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="bg-white text-[#2D3436] px-8 py-3 rounded-full font-semibold text-lg hover:bg-white/90 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
           </div>
