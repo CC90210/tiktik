@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { TeacherStatus } from '@/lib/types'
 import { formatTime } from '@/lib/utils'
 import CameraModal from './CameraModal'
+import AutoClockIn from './AutoClockIn'
 
 interface CenterInfo {
   id: string
@@ -19,6 +20,7 @@ export default function ClockInPage({ params }: { params: { slug: string } }) {
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [smartMode, setSmartMode] = useState(false)
 
   // Fetch center by slug
   useEffect(() => {
@@ -73,6 +75,28 @@ export default function ClockInPage({ params }: { params: { slug: string } }) {
     setSelectedTeacher(null)
   }
 
+  // Called by AutoClockIn — action is determined by the auto component from the
+  // current status, so we re-fetch statuses to get the correct action.
+  const handleAutoClockEvent = useCallback(async (teacherId: string, photoBase64: string) => {
+    // Fetch current status to derive the correct action
+    const statusRes = await fetch(`/api/clock-events/status?center_id=${center!.id}`)
+    const statuses: TeacherStatus[] = await statusRes.json()
+    const status = statuses.find(s => s.id === teacherId)
+    const action = status?.is_clocked_in ? 'out' : 'in'
+
+    await fetch('/api/clock-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        teacher_id: teacherId,
+        center_id: center!.id,
+        action,
+        photo_base64: photoBase64,
+      }),
+    })
+    await fetchStatuses()
+  }, [center, fetchStatuses])
+
   // Grid layout based on teacher count
   const getGridClass = (count: number) => {
     if (count <= 4) return 'grid-cols-2'
@@ -119,37 +143,67 @@ export default function ClockInPage({ params }: { params: { slug: string } }) {
             </>
           )}
         </div>
-        <div className="text-2xl font-semibold text-[#2D3436] tabular-nums">
-          {currentTime.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-          })}
+
+        <div className="flex items-center gap-4">
+          {/* Smart Mode toggle */}
+          <button
+            onClick={() => setSmartMode(m => !m)}
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold
+              border-2 transition-all duration-200 select-none
+              ${smartMode
+                ? 'bg-[#2D3436] border-[#2D3436] text-white shadow-md'
+                : 'bg-white border-[#E9EEF2] text-[#636E72] hover:border-[#00B894] hover:text-[#00B894]'
+              }
+            `}
+          >
+            <span className={`w-2 h-2 rounded-full transition-colors duration-200 ${smartMode ? 'bg-[#00B894]' : 'bg-[#B2BEC3]'}`} />
+            {smartMode ? 'Smart Mode' : 'Manual Mode'}
+          </button>
+
+          <div className="text-2xl font-semibold text-[#2D3436] tabular-nums">
+            {currentTime.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Teacher grid */}
-      <div className={`flex-1 grid ${getGridClass(teachers.length)} gap-4 p-6 content-start`}>
-        {teachers.map((teacher) => (
-          <TeacherBubble
-            key={teacher.id}
-            teacher={teacher}
-            onClick={() => setSelectedTeacher(teacher)}
-          />
-        ))}
+      {/* Main content: Smart Mode camera OR Manual teacher grid */}
+      {smartMode ? (
+        <div className="flex-1 relative overflow-hidden">
+          {center && (
+            <AutoClockIn
+              centerId={center.id}
+              onClockEvent={handleAutoClockEvent}
+            />
+          )}
+        </div>
+      ) : (
+        <div className={`flex-1 grid ${getGridClass(teachers.length)} gap-4 p-6 content-start`}>
+          {teachers.map((teacher) => (
+            <TeacherBubble
+              key={teacher.id}
+              teacher={teacher}
+              onClick={() => setSelectedTeacher(teacher)}
+            />
+          ))}
 
-        {teachers.length === 0 && (
-          <div className="col-span-full flex items-center justify-center h-full">
-            <div className="text-center text-[#B2BEC3]">
-              <div className="text-6xl mb-4">👩‍🏫</div>
-              <p className="text-2xl font-semibold mb-2">No teachers added yet</p>
-              <p className="text-lg">Add teachers from the admin dashboard</p>
+          {teachers.length === 0 && (
+            <div className="col-span-full flex items-center justify-center h-full">
+              <div className="text-center text-[#B2BEC3]">
+                <div className="text-6xl mb-4">👩‍🏫</div>
+                <p className="text-2xl font-semibold mb-2">No teachers added yet</p>
+                <p className="text-lg">Add teachers from the admin dashboard</p>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* Camera Modal */}
+      {/* Camera Modal (manual mode only) */}
       {selectedTeacher && (
         <CameraModal
           teacher={selectedTeacher}
