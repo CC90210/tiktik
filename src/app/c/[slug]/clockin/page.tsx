@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, use } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { TeacherStatus } from '@/lib/types'
 import { formatTime } from '@/lib/utils'
 import CameraModal from './CameraModal'
@@ -11,8 +11,8 @@ interface CenterInfo {
   slug: string
 }
 
-export default function ClockInPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
+export default function ClockInPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
   const [center, setCenter] = useState<CenterInfo | null>(null)
   const [teachers, setTeachers] = useState<TeacherStatus[]>([])
   const [currentTime, setCurrentTime] = useState(new Date())
