@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Center, Teacher } from '@/lib/types'
-import { formatTime, getDateString, getPayPeriodDates } from '@/lib/utils'
+import { formatTime, formatDate, getDateString, getPayPeriodDates } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import TutorialOverlay from './TutorialOverlay'
 
@@ -12,7 +12,7 @@ interface ClockEventRow {
   action: 'in' | 'out'
   photo_url: string | null
   timestamp: string
-  teachers?: { name: string }
+  teachers?: { name: string; color?: string }
 }
 
 interface ExportDay {
@@ -34,6 +34,99 @@ interface ExportData {
   teachers: ExportTeacherRow[]
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getRelativeTime(timestamp: string): string {
+  const diff = Date.now() - new Date(timestamp).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return formatDate(timestamp)
+}
+
+function computeHoursToday(events: ClockEventRow[]): number {
+  // Group by teacher, find earliest 'in' per teacher that is still active,
+  // then sum (now - clockInTime) in minutes.
+  const now = Date.now()
+  const byTeacher: Record<string, ClockEventRow[]> = {}
+  for (const e of events) {
+    if (!byTeacher[e.teacher_id]) byTeacher[e.teacher_id] = []
+    byTeacher[e.teacher_id].push(e)
+  }
+
+  let totalMinutes = 0
+  for (const teacherEvents of Object.values(byTeacher)) {
+    const sorted = [...teacherEvents].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+    // Walk pairs
+    let lastIn: Date | null = null
+    for (const ev of sorted) {
+      if (ev.action === 'in') {
+        lastIn = new Date(ev.timestamp)
+      } else if (ev.action === 'out' && lastIn) {
+        totalMinutes += (new Date(ev.timestamp).getTime() - lastIn.getTime()) / 60000
+        lastIn = null
+      }
+    }
+    // Still clocked in
+    if (lastIn) {
+      totalMinutes += (now - lastIn.getTime()) / 60000
+    }
+  }
+  return totalMinutes
+}
+
+function formatMinutes(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60)
+  const m = Math.round(totalMinutes % 60)
+  if (h === 0) return `${m}m`
+  return `${h}h ${m}m`
+}
+
+// ---------------------------------------------------------------------------
+// Stat Card
+// ---------------------------------------------------------------------------
+
+interface StatCardProps {
+  icon: string
+  value: string | number
+  label: string
+  color: string
+  borderColor: string
+  bgColor: string
+}
+
+function StatCard({ icon, value, label, color, borderColor, bgColor }: StatCardProps) {
+  return (
+    <div
+      className={`bg-white rounded-2xl border border-[#E9EEF2] shadow-sm p-5 flex items-center gap-4 border-l-4`}
+      style={{ borderLeftColor: borderColor }}
+    >
+      <div
+        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+        style={{ backgroundColor: bgColor }}
+      >
+        {icon}
+      </div>
+      <div>
+        <p className="text-2xl font-bold leading-tight" style={{ color }}>
+          {value}
+        </p>
+        <p className="text-xs text-[#B2BEC3] font-medium mt-0.5">{label}</p>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 export default function AdminPage() {
   const router = useRouter()
   const [center, setCenter] = useState<Center | null>(null)
@@ -41,7 +134,7 @@ export default function AdminPage() {
   const [todayEvents, setTodayEvents] = useState<ClockEventRow[]>([])
   const [newTeacherName, setNewTeacherName] = useState('')
   const [showTutorial, setShowTutorial] = useState(false)
-  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'export'>('today')
+  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'export' | 'staff'>('today')
   const [exportRange, setExportRange] = useState<{ start: string; end: string }>(() => {
     const { start, end } = getPayPeriodDates()
     return { start: getDateString(start), end: getDateString(end) }
@@ -49,9 +142,18 @@ export default function AdminPage() {
   const [exportData, setExportData] = useState<ExportData | null>(null)
   const [exportLoading, setExportLoading] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [photoModal, setPhotoModal] = useState<{ url: string; name: string; action: string; time: string } | null>(null)
+  const [photoModal, setPhotoModal] = useState<{
+    url: string
+    name: string
+    action: string
+    time: string
+  } | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-  const [settingsForm, setSettingsForm] = useState({ name: '', director_name: '', email: '' })
+  const [settingsForm, setSettingsForm] = useState({
+    name: '',
+    director_name: '',
+    email: '',
+  })
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -70,7 +172,11 @@ export default function AdminPage() {
           return
         }
         setCenter(data)
-        setSettingsForm({ name: data.name, director_name: data.director_name, email: data.email })
+        setSettingsForm({
+          name: data.name,
+          director_name: data.director_name,
+          email: data.email,
+        })
         if (!data.tutorial_complete) setShowTutorial(true)
       })
       .catch(() => router.push('/setup'))
@@ -88,7 +194,9 @@ export default function AdminPage() {
   // Fetch today's events
   const fetchTodayEvents = useCallback(async () => {
     if (!center) return
-    const res = await fetch(`/api/clock-events?center_id=${center.id}&date=${getDateString()}`)
+    const res = await fetch(
+      `/api/clock-events?center_id=${center.id}&date=${getDateString()}`
+    )
     const data = await res.json()
     if (Array.isArray(data)) setTodayEvents(data)
   }, [center])
@@ -103,14 +211,15 @@ export default function AdminPage() {
   // Add teacher
   const addTeacher = async () => {
     if (!newTeacherName.trim() || !center) return
+    const name = newTeacherName.trim()
     await fetch('/api/teachers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newTeacherName.trim(), center_id: center.id }),
+      body: JSON.stringify({ name, center_id: center.id }),
     })
     setNewTeacherName('')
     fetchTeachers()
-    showToast(`${newTeacherName.trim()} added!`)
+    showToast(`${name} added!`)
   }
 
   // Remove teacher
@@ -161,7 +270,11 @@ export default function AdminPage() {
     text += exportData.dates
       .map((d: string) => {
         const date = new Date(d + 'T00:00:00')
-        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' })
+        return date.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'numeric',
+          day: 'numeric',
+        })
       })
       .join('\t')
     text += '\tTotal\n'
@@ -192,16 +305,16 @@ export default function AdminPage() {
       case 'week': {
         const day = now.getDay()
         start = new Date(now)
-        start.setDate(now.getDate() - day + 1) // Monday
+        start.setDate(now.getDate() - day + 1)
         end = now
         break
       }
       case 'lastweek': {
         const day = now.getDay()
         end = new Date(now)
-        end.setDate(now.getDate() - day) // Last Sunday
+        end.setDate(now.getDate() - day)
         start = new Date(end)
-        start.setDate(end.getDate() - 6) // Last Monday
+        start.setDate(end.getDate() - 6)
         break
       }
       case 'payperiod': {
@@ -238,53 +351,74 @@ export default function AdminPage() {
     setShowTutorial(false)
   }
 
-  // Currently clocked in count
-  const clockedInCount = todayEvents.reduce(
-    (acc, event) => {
-      if (!acc.seen.has(event.teacher_id)) {
-        acc.seen.add(event.teacher_id)
-        if (event.action === 'in') acc.count++
-      }
-      return acc
-    },
-    { count: 0, seen: new Set<string>() }
-  ).count
+  // Derived stats
+  const clockedInTeacherIds = new Set<string>()
+  const latestActionByTeacher: Record<string, 'in' | 'out'> = {}
+  for (const event of todayEvents) {
+    // todayEvents are ordered newest-first from the API; first seen = latest
+    if (!(event.teacher_id in latestActionByTeacher)) {
+      latestActionByTeacher[event.teacher_id] = event.action
+    }
+  }
+  for (const [tid, action] of Object.entries(latestActionByTeacher)) {
+    if (action === 'in') clockedInTeacherIds.add(tid)
+  }
+
+  const clockedInCount = clockedInTeacherIds.size
+  const totalMinutesToday = computeHoursToday(todayEvents)
+  const hoursToday = formatMinutes(totalMinutesToday)
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8F9FC] flex items-center justify-center">
-        <div className="animate-pulse text-xl text-[#636E72]">Loading...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-[#00B894] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[#636E72] text-sm font-medium">Loading dashboard…</p>
+        </div>
       </div>
     )
   }
 
   if (!center) return null
 
+  const tabs = [
+    { id: 'today' as const, icon: '📋', label: "Today's Log" },
+    { id: 'week' as const, icon: '📅', label: 'Week View' },
+    { id: 'export' as const, icon: '📊', label: 'Export' },
+    { id: 'staff' as const, icon: '👥', label: 'Staff' },
+  ]
+
   return (
     <div className="min-h-screen bg-[#F8F9FC]">
-      {/* Toast */}
+      {/* Toast notification */}
       {toast && (
-        <div className="fixed top-4 right-4 z-[60] bg-[#00B894] text-white px-6 py-3 rounded-xl shadow-lg animate-fade-in font-medium">
-          {toast}
+        <div className="fixed top-4 right-4 z-[60] bg-[#00B894] text-white px-6 py-3 rounded-xl shadow-lg animate-fade-in font-medium flex items-center gap-2">
+          <span>✓</span>
+          <span>{toast}</span>
         </div>
       )}
 
       {/* Top bar */}
-      <header className="bg-white border-b border-[#E9EEF2] px-6 py-4">
+      <header className="bg-white border-b border-[#E9EEF2] px-6 py-4 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold">
-            <span className="text-[#00B894]">TIK</span>
-            <span className="text-[#2D3436]">TIK</span>
-            <span className="text-[#B2BEC3] font-normal ml-2">Admin</span>
-          </h1>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#00B894] rounded-lg flex items-center justify-center">
+              <span className="text-white text-sm font-bold">T</span>
+            </div>
+            <h1 className="text-xl font-bold">
+              <span className="text-[#00B894]">TIK</span>
+              <span className="text-[#2D3436]">TIK</span>
+              <span className="text-[#B2BEC3] font-normal ml-2 text-base">Admin</span>
+            </h1>
+          </div>
           <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-[#2D3436]">{center.name}</p>
+            <div className="hidden sm:block text-right">
+              <p className="text-sm font-semibold text-[#2D3436]">{center.name}</p>
               <p className="text-xs text-[#636E72]">{center.director_name}</p>
             </div>
             <button
               onClick={() => setShowSettings(true)}
-              className="w-10 h-10 rounded-full bg-[#F1F2F6] flex items-center justify-center hover:bg-[#E9EEF2] transition-colors"
+              className="w-9 h-9 rounded-full bg-[#F1F2F6] flex items-center justify-center hover:bg-[#E9EEF2] transition-colors text-base"
               aria-label="Open settings"
             >
               ⚙️
@@ -293,352 +427,569 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 space-y-6">
-        {/* Tab navigation */}
-        <div className="flex gap-2">
-          {(['today', 'week', 'export'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab)
-                if (tab === 'export') fetchExport()
-              }}
-              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
-                activeTab === tab
-                  ? 'bg-[#00B894] text-white shadow-md'
-                  : 'bg-white text-[#636E72] hover:bg-[#F1F2F6] border border-[#E9EEF2]'
-              }`}
-            >
-              {tab === 'today' ? "Today's Log" : tab === 'week' ? 'Week View' : 'Export'}
-            </button>
-          ))}
+      <main className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard
+            icon="🟢"
+            value={clockedInCount}
+            label="On Duty"
+            color="#00B894"
+            borderColor="#00B894"
+            bgColor="#E8F8F5"
+          />
+          <StatCard
+            icon="👤"
+            value={teachers.length}
+            label="Total Staff"
+            color="#0984E3"
+            borderColor="#0984E3"
+            bgColor="#EBF5FB"
+          />
+          <StatCard
+            icon="⏱"
+            value={hoursToday}
+            label="Hours Today"
+            color="#6C5CE7"
+            borderColor="#6C5CE7"
+            bgColor="#F0EEFF"
+          />
+          <StatCard
+            icon="⚡"
+            value={todayEvents.length}
+            label="Events Today"
+            color="#FF9F43"
+            borderColor="#FF9F43"
+            bgColor="#FFF5E6"
+          />
         </div>
 
-        {/* TODAY'S LOG */}
-        {activeTab === 'today' && (
-          <div className="bg-white rounded-2xl border border-[#E9EEF2] overflow-hidden" data-tutorial="today-log">
-            <div className="px-6 py-4 border-b border-[#E9EEF2]">
-              <p className="text-sm text-[#636E72]">
-                <span className="font-bold text-[#00B894] text-lg">{clockedInCount}</span>{' '}
-                teacher{clockedInCount !== 1 ? 's' : ''} on duty right now
-              </p>
-            </div>
-            <div className="divide-y divide-[#F1F2F6]">
-              {todayEvents.length === 0 ? (
-                <div className="px-6 py-12 text-center text-[#B2BEC3]">
-                  No clock events today yet
+        {/* Tab bar */}
+        <div className="bg-white rounded-2xl border border-[#E9EEF2] shadow-sm overflow-hidden">
+          <div className="flex border-b border-[#E9EEF2] overflow-x-auto">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id)
+                  if (tab.id === 'export') fetchExport()
+                }}
+                className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-all border-b-2 -mb-px ${
+                  activeTab === tab.id
+                    ? 'border-[#00B894] text-[#00B894] bg-[#F0FBF9]'
+                    : 'border-transparent text-[#636E72] hover:text-[#2D3436] hover:bg-[#F8F9FC]'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* TODAY'S LOG */}
+          {activeTab === 'today' && (
+            <div data-tutorial="today-log">
+              {/* Sub-header */}
+              <div className="px-6 py-4 flex items-center justify-between border-b border-[#F1F2F6]">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 bg-[#E8F8F5] text-[#00B894] px-3 py-1 rounded-full text-sm font-semibold">
+                    <span className="w-2 h-2 bg-[#00B894] rounded-full animate-pulse inline-block" />
+                    {clockedInCount} on duty
+                  </span>
+                  <span className="text-[#B2BEC3] text-sm hidden sm:inline">
+                    · {todayEvents.length} event{todayEvents.length !== 1 ? 's' : ''} today
+                  </span>
                 </div>
-              ) : (
-                todayEvents.map((event: ClockEventRow) => (
-                  <div
-                    key={event.id}
-                    className="px-6 py-3 flex items-center gap-4 hover:bg-[#F8F9FC] transition-colors"
-                  >
-                    {/* Photo thumbnail */}
-                    <button
-                      onClick={() =>
-                        event.photo_url &&
-                        setPhotoModal({
-                          url: event.photo_url,
-                          name: event.teachers?.name ?? 'Unknown',
-                          action: event.action,
-                          time: formatTime(event.timestamp),
-                        })
-                      }
-                      className="w-10 h-10 rounded-full overflow-hidden bg-[#F1F2F6] flex-shrink-0"
-                      aria-label={`View photo for ${event.teachers?.name ?? 'Unknown'}`}
-                    >
-                      {event.photo_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={event.photo_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#B2BEC3] text-xs">
-                          📷
-                        </div>
-                      )}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-[#2D3436]">{event.teachers?.name ?? 'Unknown'}</p>
+                <p className="text-xs text-[#B2BEC3]">
+                  {new Date().toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+              </div>
+
+              {/* Event list */}
+              <div className="divide-y divide-[#F8F9FC]">
+                {todayEvents.length === 0 ? (
+                  <div className="px-6 py-16 flex flex-col items-center gap-3 text-center">
+                    <div className="w-16 h-16 bg-[#F8F9FC] rounded-2xl flex items-center justify-center text-3xl">
+                      🕐
                     </div>
-                    <span
-                      className={`text-sm font-medium ${
-                        event.action === 'in' ? 'text-[#00B894]' : 'text-[#FF6B6B]'
-                      }`}
-                    >
-                      Clocked {event.action === 'in' ? 'In' : 'Out'}
-                    </span>
-                    <span className="text-sm text-[#636E72] w-20 text-right">
-                      {formatTime(event.timestamp)}
-                    </span>
+                    <p className="font-semibold text-[#2D3436]">No clock events yet</p>
+                    <p className="text-sm text-[#B2BEC3] max-w-xs">
+                      When staff clock in on the iPad, their events will appear here in real time.
+                    </p>
                   </div>
-                ))
+                ) : (
+                  todayEvents.map((event: ClockEventRow) => (
+                    <div
+                      key={event.id}
+                      className="px-6 py-3.5 flex items-center gap-4 hover:bg-[#F8F9FC] transition-colors group"
+                    >
+                      {/* Photo thumbnail */}
+                      <button
+                        onClick={() =>
+                          event.photo_url &&
+                          setPhotoModal({
+                            url: event.photo_url,
+                            name: event.teachers?.name ?? 'Unknown',
+                            action: event.action,
+                            time: formatTime(event.timestamp),
+                          })
+                        }
+                        className="w-12 h-12 rounded-full overflow-hidden bg-[#F1F2F6] flex-shrink-0 ring-2 ring-transparent group-hover:ring-[#E9EEF2] transition-all"
+                        aria-label={`View photo for ${event.teachers?.name ?? 'Unknown'}`}
+                        disabled={!event.photo_url}
+                      >
+                        {event.photo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={event.photo_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[#B2BEC3]">
+                            <span className="text-lg">👤</span>
+                          </div>
+                        )}
+                      </button>
+
+                      {/* Name + time */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-[#2D3436] truncate">
+                          {event.teachers?.name ?? 'Unknown'}
+                        </p>
+                        <p className="text-xs text-[#B2BEC3] mt-0.5">
+                          {formatTime(event.timestamp)}
+                          <span className="mx-1">·</span>
+                          {getRelativeTime(event.timestamp)}
+                        </p>
+                      </div>
+
+                      {/* Badge */}
+                      {event.action === 'in' ? (
+                        <span className="inline-flex items-center gap-1.5 bg-[#E8F8F5] text-[#00B894] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
+                          <span className="w-1.5 h-1.5 bg-[#00B894] rounded-full" />
+                          Clocked In
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 bg-[#FFF0F0] text-[#FF6B6B] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
+                          <span className="w-1.5 h-1.5 bg-[#FF6B6B] rounded-full" />
+                          Clocked Out
+                        </span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* WEEK VIEW */}
+          {activeTab === 'week' && (
+            <WeekView centerId={center.id} teachers={teachers} />
+          )}
+
+          {/* EXPORT */}
+          {activeTab === 'export' && (
+            <div className="p-6 space-y-5" data-tutorial="export">
+              {/* Date range controls */}
+              <div>
+                <p className="text-sm font-semibold text-[#2D3436] mb-3">Date Range</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {(['today', 'week', 'lastweek', 'payperiod'] as const).map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setQuickRange(type)}
+                      className="px-4 py-2 rounded-full text-sm font-medium bg-[#F1F2F6] text-[#636E72] hover:bg-[#E9EEF2] transition-colors"
+                    >
+                      {type === 'today'
+                        ? 'Today'
+                        : type === 'week'
+                        ? 'This Week'
+                        : type === 'lastweek'
+                        ? 'Last Week'
+                        : 'This Pay Period'}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="date"
+                      value={exportRange.start}
+                      onChange={e =>
+                        setExportRange(prev => ({ ...prev, start: e.target.value }))
+                      }
+                      className="px-3 py-2 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
+                    />
+                    <span className="text-[#B2BEC3] text-sm">→</span>
+                    <input
+                      type="date"
+                      value={exportRange.end}
+                      onChange={e =>
+                        setExportRange(prev => ({ ...prev, end: e.target.value }))
+                      }
+                      className="px-3 py-2 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
+                    />
+                  </div>
+                  <button
+                    onClick={fetchExport}
+                    className="px-5 py-2 bg-[#00B894] text-white rounded-xl text-sm font-semibold hover:bg-[#00A884] transition-colors"
+                  >
+                    Preview
+                  </button>
+                </div>
+              </div>
+
+              {exportLoading && (
+                <div className="py-12 flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-4 border-[#00B894] border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-[#636E72]">Generating report…</p>
+                </div>
+              )}
+
+              {exportData && !exportLoading && (
+                <>
+                  {/* Preview table */}
+                  <div className="rounded-xl border border-[#E9EEF2] overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-[#F8F9FC] border-b border-[#E9EEF2]">
+                            <th className="sticky left-0 bg-[#F8F9FC] text-left py-3 px-4 text-[#636E72] font-semibold">
+                              Teacher
+                            </th>
+                            {exportData.dates.map((d: string) => (
+                              <th
+                                key={d}
+                                className="text-center py-3 px-3 text-[#636E72] font-semibold whitespace-nowrap"
+                              >
+                                {new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'numeric',
+                                  day: 'numeric',
+                                })}
+                              </th>
+                            ))}
+                            <th className="text-right py-3 px-4 text-[#636E72] font-semibold">
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {exportData.teachers.map((row: ExportTeacherRow, i: number) => (
+                            <tr
+                              key={row.teacher}
+                              className={`border-b border-[#F1F2F6] ${
+                                i % 2 === 1 ? 'bg-[#F8F9FC]' : 'bg-white'
+                              }`}
+                            >
+                              <td className="py-3 px-4 font-semibold text-[#2D3436]">
+                                {row.teacher}
+                              </td>
+                              {exportData.dates.map((d: string) => {
+                                const day = row.days[d]
+                                return (
+                                  <td key={d} className="text-center py-3 px-3">
+                                    {day ? (
+                                      <div>
+                                        <div className="text-xs text-[#B2BEC3]">
+                                          {day.clockIn} – {day.clockOut || '...'}
+                                        </div>
+                                        <div className="font-semibold text-[#2D3436] mt-0.5">
+                                          {day.hours}h {day.minutes}m
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[#E9EEF2] text-lg">—</span>
+                                    )}
+                                  </td>
+                                )
+                              })}
+                              <td className="text-right py-3 px-4">
+                                <span className="bg-[#E8F8F5] text-[#00B894] font-bold px-3 py-1 rounded-full text-sm">
+                                  {row.total}h
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-[#2D3436]">
+                            <td
+                              colSpan={exportData.dates.length + 2}
+                              className="py-2 px-4 text-right text-xs text-[#636E72]"
+                            >
+                              {exportData.teachers.length} staff · {exportData.dates.length} days
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Export buttons */}
+                  <div className="flex flex-wrap gap-3 pt-2 border-t border-[#E9EEF2]">
+                    <button
+                      onClick={downloadCSV}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#00B894] text-white rounded-xl font-semibold hover:bg-[#00A884] transition-colors shadow-sm"
+                    >
+                      <span>📥</span>
+                      <span>Download CSV</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        import('jspdf').then(({ default: jsPDF }) => {
+                          import('jspdf-autotable').then(({ default: autoTable }) => {
+                            if (!exportData || !center) return
+                            const doc = new jsPDF()
+                            doc.setFontSize(18)
+                            doc.text('TIKTIK — Staff Hours Report', 14, 22)
+                            doc.setFontSize(12)
+                            doc.setTextColor(99, 110, 114)
+                            doc.text(center.name, 14, 30)
+                            doc.text(
+                              `${exportRange.start} — ${exportRange.end}`,
+                              14,
+                              37
+                            )
+
+                            const headers = [
+                              'Teacher',
+                              ...exportData.dates.map((d: string) =>
+                                new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'numeric',
+                                  day: 'numeric',
+                                })
+                              ),
+                              'Total',
+                            ]
+
+                            const rows = exportData.teachers.map(
+                              (row: ExportTeacherRow) => [
+                                row.teacher,
+                                ...exportData.dates.map((d: string) => {
+                                  const day = row.days[d]
+                                  return day ? `${day.hours}h ${day.minutes}m` : '—'
+                                }),
+                                `${row.total}h`,
+                              ]
+                            )
+
+                            autoTable(doc, {
+                              head: [headers],
+                              body: rows,
+                              startY: 44,
+                              styles: { fontSize: 9 },
+                              headStyles: { fillColor: [0, 184, 148] },
+                            })
+
+                            doc.setFontSize(8)
+                            doc.setTextColor(178, 190, 195)
+                            doc.text(
+                              `Generated ${new Date().toLocaleString()}`,
+                              14,
+                              doc.internal.pageSize.height - 10
+                            )
+
+                            doc.save(
+                              `tiktik-hours-${exportRange.start}-to-${exportRange.end}.pdf`
+                            )
+                            showToast('PDF downloaded!')
+                          })
+                        })
+                      }}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-white text-[#2D3436] border border-[#E9EEF2] rounded-xl font-semibold hover:bg-[#F1F2F6] transition-colors shadow-sm"
+                    >
+                      <span>📄</span>
+                      <span>Download PDF</span>
+                    </button>
+                    <button
+                      onClick={copyToClipboard}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-white text-[#2D3436] border border-[#E9EEF2] rounded-xl font-semibold hover:bg-[#F1F2F6] transition-colors shadow-sm"
+                    >
+                      <span>📋</span>
+                      <span>Copy to Clipboard</span>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {!exportData && !exportLoading && (
+                <div className="py-12 flex flex-col items-center gap-3 text-center">
+                  <div className="w-16 h-16 bg-[#F8F9FC] rounded-2xl flex items-center justify-center text-3xl">
+                    📊
+                  </div>
+                  <p className="font-semibold text-[#2D3436]">No data loaded yet</p>
+                  <p className="text-sm text-[#B2BEC3]">
+                    Select a date range above and click Preview.
+                  </p>
+                </div>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* WEEK VIEW */}
-        {activeTab === 'week' && (
-          <WeekView centerId={center.id} teachers={teachers} />
-        )}
-
-        {/* EXPORT */}
-        {activeTab === 'export' && (
-          <div
-            className="bg-white rounded-2xl border border-[#E9EEF2] p-6 space-y-4"
-            data-tutorial="export"
-          >
-            <div className="flex flex-wrap gap-2 items-center">
-              {(['today', 'week', 'lastweek', 'payperiod'] as const).map(type => (
-                <button
-                  key={type}
-                  onClick={() => setQuickRange(type)}
-                  className="px-4 py-2 rounded-full text-sm bg-[#F1F2F6] text-[#636E72] hover:bg-[#E9EEF2] transition-colors"
-                >
-                  {type === 'today'
-                    ? 'Today'
-                    : type === 'week'
-                    ? 'This Week'
-                    : type === 'lastweek'
-                    ? 'Last Week'
-                    : 'This Pay Period'}
-                </button>
-              ))}
-              <div className="flex items-center gap-2 ml-auto">
-                <input
-                  type="date"
-                  value={exportRange.start}
-                  onChange={e => setExportRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="px-3 py-2 border border-[#E9EEF2] rounded-lg text-sm"
-                />
-                <span className="text-[#B2BEC3]">to</span>
-                <input
-                  type="date"
-                  value={exportRange.end}
-                  onChange={e => setExportRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="px-3 py-2 border border-[#E9EEF2] rounded-lg text-sm"
-                />
-                <button
-                  onClick={fetchExport}
-                  className="px-4 py-2 bg-[#00B894] text-white rounded-lg text-sm font-medium hover:bg-[#00A884] transition-colors"
-                >
-                  Preview
-                </button>
-              </div>
-            </div>
-
-            {exportLoading && (
-              <div className="py-8 text-center text-[#636E72]">Loading...</div>
-            )}
-
-            {exportData && !exportLoading && (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[#E9EEF2]">
-                        <th className="text-left py-3 px-3 text-[#636E72] font-medium">Teacher</th>
-                        {exportData.dates.map((d: string) => (
-                          <th key={d} className="text-center py-3 px-2 text-[#636E72] font-medium">
-                            {new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'numeric',
-                              day: 'numeric',
-                            })}
-                          </th>
-                        ))}
-                        <th className="text-right py-3 px-3 text-[#636E72] font-medium">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {exportData.teachers.map((row: ExportTeacherRow, i: number) => (
-                        <tr key={row.teacher} className={i % 2 === 0 ? 'bg-[#F8F9FC]' : ''}>
-                          <td className="py-3 px-3 font-medium text-[#2D3436]">{row.teacher}</td>
-                          {exportData.dates.map((d: string) => {
-                            const day = row.days[d]
-                            return (
-                              <td key={d} className="text-center py-3 px-2 text-[#636E72]">
-                                {day ? (
-                                  <div>
-                                    <div className="text-xs">
-                                      {day.clockIn} – {day.clockOut || '...'}
-                                    </div>
-                                    <div className="font-medium text-[#2D3436]">
-                                      {day.hours}h {day.minutes}m
-                                    </div>
-                                  </div>
-                                ) : (
-                                  '—'
-                                )}
-                              </td>
-                            )
-                          })}
-                          <td className="text-right py-3 px-3 font-bold text-[#2D3436]">
-                            {row.total}h
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex gap-3 pt-4 border-t border-[#E9EEF2]">
-                  <button
-                    onClick={downloadCSV}
-                    className="px-5 py-2.5 bg-[#00B894] text-white rounded-xl font-medium hover:bg-[#00A884] transition-colors"
-                  >
-                    Download CSV
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Dynamic import keeps jspdf out of the main bundle
-                      import('jspdf').then(({ default: jsPDF }) => {
-                        import('jspdf-autotable').then(({ default: autoTable }) => {
-                          if (!exportData || !center) return
-                          const doc = new jsPDF()
-                          doc.setFontSize(18)
-                          doc.text('TIKTIK — Staff Hours Report', 14, 22)
-                          doc.setFontSize(12)
-                          doc.setTextColor(99, 110, 114)
-                          doc.text(center.name, 14, 30)
-                          doc.text(`${exportRange.start} — ${exportRange.end}`, 14, 37)
-
-                          const headers = [
-                            'Teacher',
-                            ...exportData.dates.map((d: string) =>
-                              new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
-                                weekday: 'short',
-                                month: 'numeric',
-                                day: 'numeric',
-                              })
-                            ),
-                            'Total',
-                          ]
-
-                          const rows = exportData.teachers.map((row: ExportTeacherRow) => [
-                            row.teacher,
-                            ...exportData.dates.map((d: string) => {
-                              const day = row.days[d]
-                              return day ? `${day.hours}h ${day.minutes}m` : '—'
-                            }),
-                            `${row.total}h`,
-                          ])
-
-                          autoTable(doc, {
-                            head: [headers],
-                            body: rows,
-                            startY: 44,
-                            styles: { fontSize: 9 },
-                            headStyles: { fillColor: [0, 184, 148] },
-                          })
-
-                          doc.setFontSize(8)
-                          doc.setTextColor(178, 190, 195)
-                          doc.text(
-                            `Generated ${new Date().toLocaleString()}`,
-                            14,
-                            doc.internal.pageSize.height - 10
-                          )
-
-                          doc.save(
-                            `tiktik-hours-${exportRange.start}-to-${exportRange.end}.pdf`
-                          )
-                          showToast('PDF downloaded!')
-                        })
-                      })
-                    }}
-                    className="px-5 py-2.5 bg-white text-[#2D3436] border border-[#E9EEF2] rounded-xl font-medium hover:bg-[#F1F2F6] transition-colors"
-                  >
-                    Download PDF
-                  </button>
-                  <button
-                    onClick={copyToClipboard}
-                    className="px-5 py-2.5 bg-white text-[#2D3436] border border-[#E9EEF2] rounded-xl font-medium hover:bg-[#F1F2F6] transition-colors"
-                  >
-                    Copy to Clipboard
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* TEACHERS SECTION */}
-        <div className="bg-white rounded-2xl border border-[#E9EEF2] p-6" data-tutorial="teachers">
-          <h2 className="text-lg font-bold text-[#2D3436] mb-4">Teachers</h2>
-
-          {/* Add teacher form */}
-          <div className="flex gap-3 mb-4" data-tutorial="add-teacher">
-            <input
-              type="text"
-              value={newTeacherName}
-              onChange={e => setNewTeacherName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addTeacher()}
-              placeholder="Teacher name..."
-              className="flex-1 px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
-            />
-            <button
-              onClick={addTeacher}
-              disabled={!newTeacherName.trim()}
-              className="px-6 py-2.5 bg-[#00B894] text-white rounded-xl font-medium hover:bg-[#00A884] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              + Add
-            </button>
-          </div>
-
-          {/* Teacher list */}
-          <div className="space-y-2">
-            {teachers.map(teacher => (
-              <div
-                key={teacher.id}
-                className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-[#F8F9FC] transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-4 h-4 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: teacher.color }}
+          {/* STAFF TAB */}
+          {activeTab === 'staff' && (
+            <div className="p-6 space-y-5" data-tutorial="teachers">
+              {/* Add teacher */}
+              <div data-tutorial="add-teacher">
+                <p className="text-sm font-semibold text-[#2D3436] mb-3">Add Staff Member</p>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={newTeacherName}
+                    onChange={e => setNewTeacherName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addTeacher()}
+                    placeholder="Enter teacher name…"
+                    className="flex-1 px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] placeholder-[#B2BEC3]"
                   />
-                  <span className="font-medium text-[#2D3436]">{teacher.name}</span>
+                  <button
+                    onClick={addTeacher}
+                    disabled={!newTeacherName.trim()}
+                    className="px-6 py-2.5 bg-[#00B894] text-white rounded-xl font-semibold hover:bg-[#00A884] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    + Add
+                  </button>
                 </div>
-                <button
-                  onClick={() => removeTeacher(teacher.id, teacher.name)}
-                  className="text-sm text-[#FF6B6B] hover:text-[#e55b5b] font-medium transition-colors"
-                >
-                  Remove
-                </button>
               </div>
-            ))}
-            {teachers.length === 0 && (
-              <p className="text-center text-[#B2BEC3] py-4">
-                No teachers yet. Add your first teacher above!
-              </p>
-            )}
-          </div>
+
+              {/* Staff cards grid */}
+              {teachers.length === 0 ? (
+                <div className="py-12 flex flex-col items-center gap-3 text-center">
+                  <div className="w-16 h-16 bg-[#F8F9FC] rounded-2xl flex items-center justify-center text-3xl">
+                    👥
+                  </div>
+                  <p className="font-semibold text-[#2D3436]">No staff yet</p>
+                  <p className="text-sm text-[#B2BEC3]">
+                    Add your first team member above to get started.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {teachers.map(teacher => {
+                    const isOnDuty = clockedInTeacherIds.has(teacher.id)
+                    // Compute today's completed hours for this teacher
+                    const teacherEvents = todayEvents.filter(
+                      e => e.teacher_id === teacher.id
+                    )
+                    const sortedEvts = [...teacherEvents].sort(
+                      (a, b) =>
+                        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                    )
+                    let completedMins = 0
+                    let lastIn: Date | null = null
+                    for (const ev of sortedEvts) {
+                      if (ev.action === 'in') {
+                        lastIn = new Date(ev.timestamp)
+                      } else if (ev.action === 'out' && lastIn) {
+                        completedMins +=
+                          (new Date(ev.timestamp).getTime() - lastIn.getTime()) / 60000
+                        lastIn = null
+                      }
+                    }
+                    if (lastIn) {
+                      completedMins += (Date.now() - lastIn.getTime()) / 60000
+                    }
+
+                    return (
+                      <div
+                        key={teacher.id}
+                        className="bg-[#F8F9FC] rounded-2xl border border-[#E9EEF2] p-4 flex items-center gap-4"
+                      >
+                        {/* Color avatar */}
+                        <div
+                          className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-base shadow-sm"
+                          style={{ backgroundColor: teacher.color }}
+                        >
+                          {teacher.name.charAt(0).toUpperCase()}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-[#2D3436] truncate">
+                            {teacher.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {isOnDuty ? (
+                              <span className="inline-flex items-center gap-1 bg-[#E8F8F5] text-[#00B894] text-xs font-semibold px-2 py-0.5 rounded-full">
+                                <span className="w-1.5 h-1.5 bg-[#00B894] rounded-full animate-pulse" />
+                                On Duty
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 bg-[#F1F2F6] text-[#B2BEC3] text-xs font-semibold px-2 py-0.5 rounded-full">
+                                Off Duty
+                              </span>
+                            )}
+                            {completedMins > 0 && (
+                              <span className="text-xs text-[#636E72]">
+                                {formatMinutes(completedMins)} today
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Remove */}
+                        <button
+                          onClick={() => removeTeacher(teacher.id, teacher.name)}
+                          className="text-[#B2BEC3] hover:text-[#FF6B6B] transition-colors text-lg flex-shrink-0"
+                          aria-label={`Remove ${teacher.name}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* iPad link */}
-        <div className="bg-white rounded-2xl border border-[#E9EEF2] p-6">
-          <h2 className="text-lg font-bold text-[#2D3436] mb-2">iPad Clock-In Screen</h2>
-          <p className="text-sm text-[#636E72] mb-3">
-            Open this link on your iPad and bookmark it for the clock-in screen:
-          </p>
-          <div className="flex items-center gap-3">
-            <code className="flex-1 bg-[#F1F2F6] px-4 py-2.5 rounded-xl text-sm text-[#2D3436] font-mono">
-              {typeof window !== 'undefined'
-                ? `${window.location.origin}/c/${center.slug}/clockin`
-                : `/c/${center.slug}/clockin`}
-            </code>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  `${window.location.origin}/c/${center.slug}/clockin`
-                )
-                showToast('Link copied!')
-              }}
-              className="px-4 py-2.5 bg-[#F1F2F6] rounded-xl text-sm font-medium hover:bg-[#E9EEF2] transition-colors"
-            >
-              Copy
-            </button>
+        {/* iPad Clock-In Link */}
+        <div className="rounded-2xl overflow-hidden shadow-sm">
+          <div
+            className="p-6"
+            style={{
+              background: 'linear-gradient(135deg, #00B894 0%, #00CEC9 100%)',
+            }}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">
+                📱
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-bold text-base mb-0.5">
+                  iPad Clock-In Screen
+                </p>
+                <p className="text-white/70 text-sm mb-3">
+                  Bookmark this URL on your iPad for the staff clock-in kiosk.
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-white/20 text-white px-4 py-2.5 rounded-xl text-sm font-mono truncate backdrop-blur-sm">
+                    {typeof window !== 'undefined'
+                      ? `${window.location.origin}/c/${center.slug}/clockin`
+                      : `/c/${center.slug}/clockin`}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/c/${center.slug}/clockin`
+                      )
+                      showToast('Link copied!')
+                    }}
+                    className="px-4 py-2.5 bg-white text-[#00B894] rounded-xl text-sm font-bold hover:bg-white/90 transition-colors flex-shrink-0"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -650,16 +1001,16 @@ export default function AdminPage() {
           onClick={() => setPhotoModal(null)}
         >
           <div
-            className="bg-white rounded-2xl overflow-hidden max-w-lg w-full"
+            className="bg-white rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photoModal.url} alt="" className="w-full aspect-video object-cover" />
-            <div className="p-4 flex items-center justify-between">
+            <div className="p-5 flex items-center justify-between">
               <div>
-                <p className="font-bold text-[#2D3436]">{photoModal.name}</p>
+                <p className="font-bold text-[#2D3436] text-base">{photoModal.name}</p>
                 <p
-                  className={`text-sm ${
+                  className={`text-sm font-medium mt-0.5 ${
                     photoModal.action === 'in' ? 'text-[#00B894]' : 'text-[#FF6B6B]'
                   }`}
                 >
@@ -668,7 +1019,7 @@ export default function AdminPage() {
               </div>
               <button
                 onClick={() => setPhotoModal(null)}
-                className="text-[#B2BEC3] hover:text-[#636E72]"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F1F2F6] text-[#636E72] hover:bg-[#E9EEF2] transition-colors font-medium"
                 aria-label="Close photo"
               >
                 ✕
@@ -685,20 +1036,32 @@ export default function AdminPage() {
           onClick={() => setShowSettings(false)}
         >
           <div
-            className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4"
+            className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-[#2D3436]">Settings</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-[#2D3436]">Settings</h2>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#F1F2F6] text-[#636E72] hover:bg-[#E9EEF2] transition-colors"
+                aria-label="Close settings"
+              >
+                ✕
+              </button>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-[#636E72] mb-1">Center Name</label>
+              <label className="block text-sm font-semibold text-[#636E72] mb-1.5">
+                Center Name
+              </label>
               <input
                 value={settingsForm.name}
                 onChange={e => setSettingsForm(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30"
+                className="w-full px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#636E72] mb-1">
+              <label className="block text-sm font-semibold text-[#636E72] mb-1.5">
                 Director Name
               </label>
               <input
@@ -706,52 +1069,62 @@ export default function AdminPage() {
                 onChange={e =>
                   setSettingsForm(prev => ({ ...prev, director_name: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30"
+                className="w-full px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#636E72] mb-1">Email</label>
+              <label className="block text-sm font-semibold text-[#636E72] mb-1.5">
+                Email
+              </label>
               <input
                 value={settingsForm.email}
-                onChange={e => setSettingsForm(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30"
+                onChange={e =>
+                  setSettingsForm(prev => ({ ...prev, email: e.target.value }))
+                }
+                className="w-full px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
               />
             </div>
+
             <div className="flex gap-3 pt-2">
               <button
                 onClick={saveSettings}
-                className="px-5 py-2.5 bg-[#00B894] text-white rounded-xl font-medium flex-1"
+                className="flex-1 px-5 py-2.5 bg-[#00B894] text-white rounded-xl font-semibold hover:bg-[#00A884] transition-colors"
               >
-                Save
+                Save Changes
               </button>
               <button
                 onClick={() => setShowSettings(false)}
-                className="px-5 py-2.5 bg-[#F1F2F6] rounded-xl font-medium"
+                className="px-5 py-2.5 bg-[#F1F2F6] text-[#636E72] rounded-xl font-semibold hover:bg-[#E9EEF2] transition-colors"
               >
                 Cancel
               </button>
             </div>
+
             <hr className="border-[#E9EEF2]" />
+
             <div>
+              <p className="text-xs font-semibold text-[#B2BEC3] uppercase tracking-wider mb-3">
+                Danger Zone
+              </p>
               {!deleteConfirm ? (
                 <button
                   onClick={() => setDeleteConfirm(true)}
-                  className="text-sm text-[#FF6B6B] hover:text-[#e55b5b]"
+                  className="text-sm text-[#FF6B6B] hover:text-[#e55b5b] font-medium transition-colors"
                 >
                   Delete All Data
                 </button>
               ) : (
-                <div className="bg-[#FF6B6B]/10 p-3 rounded-xl">
-                  <p className="text-sm text-[#FF6B6B] font-medium mb-2">
+                <div className="bg-[#FF6B6B]/10 border border-[#FF6B6B]/20 p-4 rounded-xl">
+                  <p className="text-sm text-[#FF6B6B] font-semibold mb-3">
                     Are you absolutely sure? This cannot be undone.
                   </p>
                   <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-[#FF6B6B] text-white rounded-lg text-sm font-medium">
+                    <button className="px-4 py-2 bg-[#FF6B6B] text-white rounded-lg text-sm font-semibold hover:bg-[#e55b5b] transition-colors">
                       Yes, Delete Everything
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(false)}
-                      className="px-4 py-2 bg-white border rounded-lg text-sm"
+                      className="px-4 py-2 bg-white border border-[#E9EEF2] rounded-lg text-sm font-medium hover:bg-[#F8F9FC] transition-colors"
                     >
                       Cancel
                     </button>
@@ -772,7 +1145,7 @@ export default function AdminPage() {
         @keyframes fade-in {
           from {
             opacity: 0;
-            transform: translateY(-10px);
+            transform: translateY(-8px);
           }
           to {
             opacity: 1;
@@ -780,7 +1153,7 @@ export default function AdminPage() {
           }
         }
         .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
+          animation: fade-in 0.25s ease-out;
         }
       `}</style>
     </div>
@@ -788,7 +1161,7 @@ export default function AdminPage() {
 }
 
 // ---------------------------------------------------------------------------
-// WeekView — inline component, lives in this file only
+// WeekView — inline component
 // ---------------------------------------------------------------------------
 
 interface WeekViewProps {
@@ -821,46 +1194,140 @@ function WeekView({ centerId }: WeekViewProps) {
   }, [centerId])
 
   if (loading) {
-    return <div className="py-8 text-center text-[#636E72]">Loading week view...</div>
+    return (
+      <div className="py-12 flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-4 border-[#00B894] border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-[#636E72]">Loading week view…</p>
+      </div>
+    )
   }
 
   if (!weekData) return null
 
+  // Compute totals per teacher
+  const teacherTotals: Record<string, number> = {}
+  for (const row of weekData.teachers) {
+    let mins = 0
+    for (const day of Object.values(row.days)) {
+      mins += day.hours * 60 + day.minutes
+    }
+    teacherTotals[row.teacher] = mins
+  }
+
   return (
-    <div className="bg-white rounded-2xl border border-[#E9EEF2] overflow-hidden">
+    <div>
+      <div className="px-6 py-4 border-b border-[#F1F2F6]">
+        <p className="text-sm text-[#636E72]">
+          Week of{' '}
+          <span className="font-semibold text-[#2D3436]">
+            {weekData.dates.length > 0
+              ? new Date(weekData.dates[0] + 'T00:00:00').toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                })
+              : '—'}
+          </span>
+        </p>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#E9EEF2] bg-[#F8F9FC]">
-              <th className="text-left py-3 px-4 text-[#636E72] font-medium">Teacher</th>
-              {weekData.dates.map((d: string) => (
-                <th key={d} className="text-center py-3 px-3 text-[#636E72] font-medium">
-                  {new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
-                </th>
-              ))}
+            <tr className="bg-[#F8F9FC] border-b border-[#E9EEF2]">
+              <th className="text-left py-3 px-5 text-[#636E72] font-semibold">Staff</th>
+              {weekData.dates.map((d: string) => {
+                const date = new Date(d + 'T00:00:00')
+                const isToday = getDateString() === d
+                return (
+                  <th
+                    key={d}
+                    className={`text-center py-3 px-3 font-semibold ${
+                      isToday ? 'text-[#00B894]' : 'text-[#636E72]'
+                    }`}
+                  >
+                    <div>{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                    <div className="text-xs font-normal mt-0.5">
+                      {date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
+                    </div>
+                  </th>
+                )
+              })}
+              <th className="text-right py-3 px-5 text-[#636E72] font-semibold">Total</th>
             </tr>
           </thead>
           <tbody>
             {weekData.teachers.map((row: ExportTeacherRow, i: number) => (
-              <tr key={row.teacher} className={i % 2 === 0 ? '' : 'bg-[#F8F9FC]'}>
-                <td className="py-3 px-4 font-medium text-[#2D3436]">{row.teacher}</td>
+              <tr
+                key={row.teacher}
+                className={`border-b border-[#F8F9FC] ${
+                  i % 2 === 1 ? 'bg-[#F8F9FC]' : 'bg-white'
+                }`}
+              >
+                <td className="py-3.5 px-5 font-semibold text-[#2D3436]">{row.teacher}</td>
                 {weekData.dates.map((d: string) => {
                   const day = row.days[d]
                   return (
-                    <td key={d} className="text-center py-3 px-3">
+                    <td key={d} className="text-center py-3.5 px-3">
                       {day ? (
-                        <span className="text-[#00B894]">
-                          ✅ {day.hours}h {day.minutes}m
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="inline-flex items-center gap-1 bg-[#E8F8F5] text-[#00B894] text-xs font-semibold px-2.5 py-1 rounded-full">
+                            {day.hours}h {day.minutes}m
+                          </span>
+                          <span className="text-xs text-[#B2BEC3]">
+                            {day.clockIn}–{day.clockOut || '…'}
+                          </span>
+                        </div>
                       ) : (
-                        <span className="text-[#FF6B6B]">❌</span>
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-[#FFF0F0] text-[#FF6B6B] rounded-full text-xs font-bold">
+                          –
+                        </span>
                       )}
                     </td>
                   )
                 })}
+                <td className="text-right py-3.5 px-5">
+                  <span className="bg-[#2D3436] text-white font-bold px-3 py-1 rounded-full text-xs">
+                    {row.total}h
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
+          {weekData.teachers.length > 0 && (
+            <tfoot>
+              <tr className="bg-[#F8F9FC] border-t-2 border-[#E9EEF2]">
+                <td className="py-3 px-5 text-xs font-bold text-[#636E72] uppercase tracking-wider">
+                  Summary
+                </td>
+                {weekData.dates.map((d: string) => {
+                  const dayTotal = weekData.teachers.reduce((sum, row) => {
+                    const day = row.days[d]
+                    return sum + (day ? day.hours * 60 + day.minutes : 0)
+                  }, 0)
+                  return (
+                    <td key={d} className="text-center py-3 px-3">
+                      {dayTotal > 0 ? (
+                        <span className="text-xs font-semibold text-[#636E72]">
+                          {Math.floor(dayTotal / 60)}h {dayTotal % 60}m
+                        </span>
+                      ) : (
+                        <span className="text-[#E9EEF2] text-xs">—</span>
+                      )}
+                    </td>
+                  )
+                })}
+                <td className="text-right py-3 px-5">
+                  <span className="text-xs font-bold text-[#00B894]">
+                    {formatMinutes(
+                      weekData.teachers.reduce(
+                        (sum, row) => sum + (teacherTotals[row.teacher] ?? 0),
+                        0
+                      )
+                    )}
+                  </span>
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>

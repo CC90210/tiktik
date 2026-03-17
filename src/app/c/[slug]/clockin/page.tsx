@@ -76,9 +76,7 @@ export default function ClockInPage({ params }: { params: { slug: string } }) {
   // Grid layout based on teacher count
   const getGridClass = (count: number) => {
     if (count <= 4) return 'grid-cols-2'
-    if (count <= 6) return 'grid-cols-3'
     if (count <= 9) return 'grid-cols-3'
-    if (count <= 12) return 'grid-cols-4'
     return 'grid-cols-4'
   }
 
@@ -162,25 +160,19 @@ export default function ClockInPage({ params }: { params: { slug: string } }) {
 
       <style jsx global>{`
         @keyframes pulse-glow {
-          0%, 100% {
-            box-shadow: 0 0 0 0 currentColor;
-          }
-          50% {
-            box-shadow: 0 0 24px 4px var(--glow-color);
-          }
+          0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+          50%       { box-shadow: 0 0 24px 4px var(--glow-color); }
         }
-
         .teacher-bubble-in {
           animation: pulse-glow 2.4s ease-in-out infinite;
         }
 
         @keyframes press-bounce {
-          0% { transform: scale(1); }
-          40% { transform: scale(0.94); }
-          70% { transform: scale(1.03); }
+          0%   { transform: scale(1); }
+          40%  { transform: scale(0.94); }
+          70%  { transform: scale(1.03); }
           100% { transform: scale(1); }
         }
-
         .teacher-bubble-active:active {
           animation: press-bounce 0.35s ease forwards;
         }
@@ -189,7 +181,8 @@ export default function ClockInPage({ params }: { params: { slug: string } }) {
   )
 }
 
-// Extracted bubble component to keep parent clean
+// ─── TeacherBubble ────────────────────────────────────────────────────────────
+
 interface TeacherBubbleProps {
   teacher: TeacherStatus
   onClick: () => void
@@ -216,7 +209,6 @@ function TeacherBubble({ teacher, onClick }: TeacherBubbleProps) {
         isIn
           ? {
               backgroundColor: teacher.color,
-              // CSS variable for the glow animation
               ['--glow-color' as string]: `${teacher.color}66`,
             }
           : undefined
