@@ -6,6 +6,7 @@ import { formatTime, formatDate, getDateString, getPayPeriodDates } from '@/lib/
 import { useRouter } from 'next/navigation'
 import TutorialOverlay from './TutorialOverlay'
 import FaceEnrollModal from './FaceEnrollModal'
+import CameraTab from './CameraTab'
 
 interface ClockEventRow {
   id: string
@@ -135,7 +136,7 @@ export default function AdminPage() {
   const [todayEvents, setTodayEvents] = useState<ClockEventRow[]>([])
   const [newTeacherName, setNewTeacherName] = useState('')
   const [showTutorial, setShowTutorial] = useState(false)
-  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'export' | 'staff'>('today')
+  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'export' | 'staff' | 'cameras'>('today')
   const [exportRange, setExportRange] = useState<{ start: string; end: string }>(() => {
     const { start, end } = getPayPeriodDates()
     return { start: getDateString(start), end: getDateString(end) }
@@ -388,6 +389,7 @@ export default function AdminPage() {
     { id: 'week' as const, icon: '📅', label: 'Week View' },
     { id: 'export' as const, icon: '📊', label: 'Export' },
     { id: 'staff' as const, icon: '👥', label: 'Staff' },
+    { id: 'cameras' as const, icon: '📹', label: 'Cameras' },
   ]
 
   return (
@@ -834,6 +836,11 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* CAMERAS TAB */}
+          {activeTab === 'cameras' && center && (
+            <CameraTab centerId={center.id} showToast={showToast} />
           )}
 
           {/* STAFF TAB */}

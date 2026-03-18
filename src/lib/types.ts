@@ -43,3 +43,17 @@ export const TEACHER_COLORS = [
 export function getNextColor(existingCount: number): string {
   return TEACHER_COLORS[existingCount % TEACHER_COLORS.length]
 }
+
+export interface Camera {
+  id: string
+  center_id: string
+  name: string
+  location: string
+  rtsp_url: string | null
+  rtsp_username: string | null
+  channel: number
+  subtype: number
+  enabled: boolean
+  proxy_stream_name: string | null
+  created_at: string
+}
