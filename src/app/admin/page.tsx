@@ -51,8 +51,6 @@ function getRelativeTime(timestamp: string): string {
 }
 
 function computeHoursToday(events: ClockEventRow[]): number {
-  // Group by teacher, find earliest 'in' per teacher that is still active,
-  // then sum (now - clockInTime) in minutes.
   const now = Date.now()
   const byTeacher: Record<string, ClockEventRow[]> = {}
   for (const e of events) {
@@ -65,7 +63,6 @@ function computeHoursToday(events: ClockEventRow[]): number {
     const sorted = [...teacherEvents].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     )
-    // Walk pairs
     let lastIn: Date | null = null
     for (const ev of sorted) {
       if (ev.action === 'in') {
@@ -75,7 +72,6 @@ function computeHoursToday(events: ClockEventRow[]): number {
         lastIn = null
       }
     }
-    // Still clocked in
     if (lastIn) {
       totalMinutes += (now - lastIn.getTime()) / 60000
     }
@@ -88,6 +84,75 @@ function formatMinutes(totalMinutes: number): string {
   const m = Math.round(totalMinutes % 60)
   if (h === 0) return `${m}m`
   return `${h}h ${m}m`
+}
+
+// ---------------------------------------------------------------------------
+// SVG Icons
+// ---------------------------------------------------------------------------
+
+function IconDashboard() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1m-6 0h6" />
+    </svg>
+  )
+}
+
+function IconClock() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
+}
+
+function IconCalendar() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  )
+}
+
+function IconExport() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  )
+}
+
+function IconStaff() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  )
+}
+
+function IconCamera() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  )
+}
+
+function IconSettings() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  )
+}
+
+function IconHamburger() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -106,7 +171,7 @@ interface StatCardProps {
 function StatCard({ icon, value, label, color, borderColor, bgColor }: StatCardProps) {
   return (
     <div
-      className={`bg-[#1A1D27] rounded-2xl border border-[#2E3345] shadow-sm p-5 flex items-center gap-4 border-l-4`}
+      className="bg-[#1A1D27] rounded-2xl border border-[#2E3345] shadow-sm p-5 flex items-center gap-4 border-l-4"
       style={{ borderLeftColor: borderColor }}
     >
       <div
@@ -129,6 +194,8 @@ function StatCard({ icon, value, label, color, borderColor, bgColor }: StatCardP
 // Main component
 // ---------------------------------------------------------------------------
 
+type ActiveTab = 'dashboard' | 'today' | 'week' | 'export' | 'staff' | 'cameras'
+
 export default function AdminPage() {
   const router = useRouter()
   const [center, setCenter] = useState<Center | null>(null)
@@ -136,7 +203,8 @@ export default function AdminPage() {
   const [todayEvents, setTodayEvents] = useState<ClockEventRow[]>([])
   const [newTeacherName, setNewTeacherName] = useState('')
   const [showTutorial, setShowTutorial] = useState(false)
-  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'export' | 'staff' | 'cameras'>('today')
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [exportRange, setExportRange] = useState<{ start: string; end: string }>(() => {
     const { start, end } = getPayPeriodDates()
     return { start: getDateString(start), end: getDateString(end) }
@@ -358,7 +426,6 @@ export default function AdminPage() {
   const clockedInTeacherIds = new Set<string>()
   const latestActionByTeacher: Record<string, 'in' | 'out'> = {}
   for (const event of todayEvents) {
-    // todayEvents are ordered newest-first from the API; first seen = latest
     if (!(event.teacher_id in latestActionByTeacher)) {
       latestActionByTeacher[event.teacher_id] = event.action
     }
@@ -384,226 +451,471 @@ export default function AdminPage() {
 
   if (!center) return null
 
-  const tabs = [
-    { id: 'today' as const, icon: '📋', label: "Today's Log" },
-    { id: 'week' as const, icon: '📅', label: 'Week View' },
-    { id: 'export' as const, icon: '📊', label: 'Export' },
-    { id: 'staff' as const, icon: '👥', label: 'Staff' },
-    { id: 'cameras' as const, icon: '📹', label: 'Cameras' },
+  const navItems: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: <IconDashboard /> },
+    { id: 'today', label: "Today's Log", icon: <IconClock /> },
+    { id: 'week', label: 'Week View', icon: <IconCalendar /> },
+    { id: 'export', label: 'Export', icon: <IconExport /> },
+    { id: 'staff', label: 'Staff', icon: <IconStaff /> },
+    { id: 'cameras', label: 'Cameras', icon: <IconCamera /> },
   ]
 
+  const tabLabels: Record<ActiveTab, string> = {
+    dashboard: 'Dashboard',
+    today: "Today's Log",
+    week: 'Week View',
+    export: 'Export',
+    staff: 'Staff',
+    cameras: 'Cameras',
+  }
+
+  const handleNavClick = (id: ActiveTab) => {
+    setActiveTab(id)
+    setSidebarOpen(false)
+    if (id === 'export') fetchExport()
+  }
+
   return (
-    <div className="min-h-screen bg-[#0F1117]">
+    <div className="min-h-screen bg-[#0F1117] flex">
+
       {/* Toast notification */}
       {toast && (
-        <div className="fixed top-4 right-4 z-[60] bg-[#00B894] text-white px-6 py-3 rounded-xl shadow-lg animate-fade-in font-medium flex items-center gap-2">
+        <div className="fixed top-4 right-4 z-[70] bg-[#00B894] text-white px-6 py-3 rounded-xl shadow-lg animate-fade-in font-medium flex items-center gap-2">
           <span>✓</span>
           <span>{toast}</span>
         </div>
       )}
 
-      {/* Top bar */}
-      <header className="bg-[#1A1D27] border-b border-[#2E3345] px-6 py-4 sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* SIDEBAR                                                              */}
+      {/* ------------------------------------------------------------------ */}
+      <aside
+        className={`
+          fixed top-0 left-0 h-full w-64 bg-[#141720] border-r border-[#2E3345] z-50 flex flex-col
+          transition-transform duration-200
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0
+        `}
+      >
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-[#2E3345]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#00B894] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#00B894] rounded-lg flex items-center justify-center flex-shrink-0">
               <span className="text-white text-sm font-bold">T</span>
             </div>
-            <h1 className="text-xl font-bold">
-              <span className="text-[#00B894]">TIK</span>
-              <span className="text-[#EAEDF3]">TIK</span>
-              <span className="text-[#5A6178] font-normal ml-2 text-base">Admin</span>
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-semibold text-[#EAEDF3]">{center.name}</p>
-              <p className="text-xs text-[#8B92A5]">{center.director_name}</p>
+            <div>
+              <p className="text-base font-bold leading-none">
+                <span className="text-[#00B894]">TIK</span>
+                <span className="text-[#EAEDF3]">TIK</span>
+              </p>
+              <p className="text-xs text-[#5A6178] mt-0.5 truncate max-w-[140px]">{center.name}</p>
             </div>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="w-9 h-9 rounded-full bg-[#242836] flex items-center justify-center hover:bg-[#2E3345] transition-colors text-base"
-              aria-label="Open settings"
-            >
-              ⚙️
-            </button>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
-
-        {/* Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard
-            icon="🟢"
-            value={clockedInCount}
-            label="On Duty"
-            color="#00B894"
-            borderColor="#00B894"
-            bgColor="rgba(0,184,148,0.15)"
-          />
-          <StatCard
-            icon="👤"
-            value={teachers.length}
-            label="Total Staff"
-            color="#0984E3"
-            borderColor="#0984E3"
-            bgColor="rgba(9,132,227,0.15)"
-          />
-          <StatCard
-            icon="⏱"
-            value={hoursToday}
-            label="Hours Today"
-            color="#6C5CE7"
-            borderColor="#6C5CE7"
-            bgColor="rgba(108,92,231,0.15)"
-          />
-          <StatCard
-            icon="⚡"
-            value={todayEvents.length}
-            label="Events Today"
-            color="#FF9F43"
-            borderColor="#FF9F43"
-            bgColor="rgba(255,159,67,0.15)"
-          />
-        </div>
-
-        {/* Tab bar */}
-        <div className="bg-[#1A1D27] rounded-2xl border border-[#2E3345] shadow-sm overflow-hidden">
-          <div className="flex border-b border-[#2E3345] overflow-x-auto">
-            {tabs.map(tab => (
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          {navItems.map(item => {
+            const isActive = activeTab === item.id
+            return (
               <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id)
-                  if (tab.id === 'export') fetchExport()
-                }}
-                className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-all border-b-2 -mb-px ${
-                  activeTab === tab.id
-                    ? 'border-[#00B894] text-[#00B894] bg-[rgba(0,184,148,0.08)]'
-                    : 'border-transparent text-[#8B92A5] hover:text-[#EAEDF3] hover:bg-[#242836]'
-                }`}
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                  transition-all text-left
+                  ${isActive
+                    ? 'text-[#00B894] bg-[rgba(0,184,148,0.08)] border-l-2 border-[#00B894] pl-[10px]'
+                    : 'text-[#8B92A5] hover:text-[#EAEDF3] hover:bg-[#1A1D27] border-l-2 border-transparent pl-[10px]'
+                  }
+                `}
               >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
+                <span className={isActive ? 'text-[#00B894]' : 'text-[#5A6178]'}>
+                  {item.icon}
+                </span>
+                {item.label}
               </button>
-            ))}
-          </div>
+            )
+          })}
+        </nav>
 
-          {/* TODAY'S LOG */}
-          {activeTab === 'today' && (
-            <div data-tutorial="today-log">
-              {/* Sub-header */}
-              <div className="px-6 py-4 flex items-center justify-between border-b border-[#2E3345]">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 bg-[rgba(0,184,148,0.15)] text-[#00B894] px-3 py-1 rounded-full text-sm font-semibold">
-                    <span className="w-2 h-2 bg-[#00B894] rounded-full animate-pulse inline-block" />
-                    {clockedInCount} on duty
-                  </span>
-                  <span className="text-[#5A6178] text-sm hidden sm:inline">
-                    · {todayEvents.length} event{todayEvents.length !== 1 ? 's' : ''} today
-                  </span>
+        {/* Bottom: Settings + Director */}
+        <div className="px-3 py-4 border-t border-[#2E3345]">
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[#8B92A5] hover:text-[#EAEDF3] hover:bg-[#1A1D27] transition-all border-l-2 border-transparent pl-[10px]"
+          >
+            <span className="text-[#5A6178]"><IconSettings /></span>
+            Settings
+          </button>
+          <div className="mt-3 px-3 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-[#242836] flex items-center justify-center text-xs font-bold text-[#8B92A5] flex-shrink-0">
+              {center.director_name?.charAt(0)?.toUpperCase() ?? 'D'}
+            </div>
+            <p className="text-xs text-[#5A6178] truncate">{center.director_name}</p>
+          </div>
+        </div>
+      </aside>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* MAIN CONTENT                                                         */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 h-14 bg-[#1A1D27] border-b border-[#2E3345] flex items-center px-6 gap-4">
+          {/* Hamburger (mobile only) */}
+          <button
+            className="lg:hidden text-[#8B92A5] hover:text-[#EAEDF3] transition-colors"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open sidebar"
+          >
+            <IconHamburger />
+          </button>
+
+          {/* Page title */}
+          <h1 className="text-base font-bold text-[#EAEDF3] flex-1">
+            {tabLabels[activeTab]}
+          </h1>
+
+          {/* Date */}
+          <p className="text-sm text-[#5A6178] hidden sm:block">
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 px-6 lg:px-8 py-6 space-y-6">
+
+          {/* ============================================================ */}
+          {/* DASHBOARD TAB                                                  */}
+          {/* ============================================================ */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              {/* Stat Cards */}
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard
+                  icon="🟢"
+                  value={clockedInCount}
+                  label="On Duty"
+                  color="#00B894"
+                  borderColor="#00B894"
+                  bgColor="rgba(0,184,148,0.15)"
+                />
+                <StatCard
+                  icon="👤"
+                  value={teachers.length}
+                  label="Total Staff"
+                  color="#0984E3"
+                  borderColor="#0984E3"
+                  bgColor="rgba(9,132,227,0.15)"
+                />
+                <StatCard
+                  icon="⏱"
+                  value={hoursToday}
+                  label="Hours Today"
+                  color="#6C5CE7"
+                  borderColor="#6C5CE7"
+                  bgColor="rgba(108,92,231,0.15)"
+                />
+                <StatCard
+                  icon="⚡"
+                  value={todayEvents.length}
+                  label="Events Today"
+                  color="#FF9F43"
+                  borderColor="#FF9F43"
+                  bgColor="rgba(255,159,67,0.15)"
+                />
+              </div>
+
+              {/* Two-column section */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                {/* Recent Activity (~60%) */}
+                <div className="lg:col-span-3 bg-[#1A1D27] rounded-2xl border border-[#2E3345]">
+                  <div className="px-5 py-4 border-b border-[#2E3345] flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-[#EAEDF3]">Recent Activity</h2>
+                    <button
+                      onClick={() => handleNavClick('today')}
+                      className="text-xs text-[#00B894] hover:text-[#00A884] transition-colors font-medium"
+                    >
+                      View all
+                    </button>
+                  </div>
+                  <div className="divide-y divide-[#2E3345]">
+                    {todayEvents.length === 0 ? (
+                      <div className="px-5 py-10 flex flex-col items-center gap-2 text-center">
+                        <div className="w-12 h-12 bg-[#242836] rounded-xl flex items-center justify-center text-2xl">
+                          🕐
+                        </div>
+                        <p className="text-sm font-semibold text-[#EAEDF3]">No events yet today</p>
+                        <p className="text-xs text-[#5A6178] max-w-xs">
+                          Clock-in events will appear here in real time.
+                        </p>
+                      </div>
+                    ) : (
+                      todayEvents.slice(0, 8).map((event: ClockEventRow) => (
+                        <div
+                          key={event.id}
+                          className="px-5 py-3 flex items-center gap-3 hover:bg-[#242836] transition-colors group"
+                        >
+                          <button
+                            onClick={() =>
+                              event.photo_url &&
+                              setPhotoModal({
+                                url: event.photo_url,
+                                name: event.teachers?.name ?? 'Unknown',
+                                action: event.action,
+                                time: formatTime(event.timestamp),
+                              })
+                            }
+                            className="w-9 h-9 rounded-full overflow-hidden bg-[#242836] flex-shrink-0"
+                            disabled={!event.photo_url}
+                          >
+                            {event.photo_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={event.photo_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#5A6178] text-sm">
+                                👤
+                              </div>
+                            )}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-[#EAEDF3] truncate">
+                              {event.teachers?.name ?? 'Unknown'}
+                            </p>
+                            <p className="text-xs text-[#5A6178]">
+                              {formatTime(event.timestamp)} · {getRelativeTime(event.timestamp)}
+                            </p>
+                          </div>
+                          {event.action === 'in' ? (
+                            <span className="inline-flex items-center gap-1 bg-[rgba(0,184,148,0.15)] text-[#00B894] text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0">
+                              <span className="w-1.5 h-1.5 bg-[#00B894] rounded-full" />
+                              In
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-[rgba(255,107,107,0.15)] text-[#FF6B6B] text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0">
+                              <span className="w-1.5 h-1.5 bg-[#FF6B6B] rounded-full" />
+                              Out
+                            </span>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs text-[#5A6178]">
-                  {new Date().toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </p>
+
+                {/* Quick Actions (~40%) */}
+                <div className="lg:col-span-2 space-y-4">
+                  {/* iPad Link Card */}
+                  <div
+                    className="rounded-2xl overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg, #00B894 0%, #00CEC9 100%)' }}
+                  >
+                    <div className="p-5">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                          📱
+                        </div>
+                        <div>
+                          <p className="text-white font-bold text-sm">iPad Clock-In Screen</p>
+                          <p className="text-white/70 text-xs">Kiosk URL for staff</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 bg-white/20 text-white px-3 py-2 rounded-lg text-xs font-mono truncate">
+                          {typeof window !== 'undefined'
+                            ? `${window.location.origin}/c/${center.slug}/clockin`
+                            : `/c/${center.slug}/clockin`}
+                        </code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}/c/${center.slug}/clockin`
+                            )
+                            showToast('Link copied!')
+                          }}
+                          className="px-3 py-2 bg-white text-[#00B894] rounded-lg text-xs font-bold hover:bg-white/90 transition-colors flex-shrink-0"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Staff on duty */}
+                  <div className="bg-[#1A1D27] rounded-2xl border border-[#2E3345]">
+                    <div className="px-5 py-4 border-b border-[#2E3345] flex items-center justify-between">
+                      <h2 className="text-sm font-semibold text-[#EAEDF3]">On Duty Now</h2>
+                      <button
+                        onClick={() => handleNavClick('staff')}
+                        className="text-xs text-[#00B894] hover:text-[#00A884] transition-colors font-medium"
+                      >
+                        Manage
+                      </button>
+                    </div>
+                    <div className="px-5 py-3 space-y-2">
+                      {teachers.filter(t => clockedInTeacherIds.has(t.id)).length === 0 ? (
+                        <p className="text-sm text-[#5A6178] py-3 text-center">
+                          No staff currently on duty
+                        </p>
+                      ) : (
+                        teachers
+                          .filter(t => clockedInTeacherIds.has(t.id))
+                          .map(t => (
+                            <div key={t.id} className="flex items-center gap-2.5">
+                              <span className="w-2 h-2 rounded-full bg-[#00B894] flex-shrink-0 animate-pulse" />
+                              <div
+                                className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
+                                style={{ backgroundColor: t.color }}
+                              >
+                                {t.name.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="text-sm text-[#EAEDF3] font-medium truncate">{t.name}</span>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                    <div className="px-5 pb-4 pt-1">
+                      <button
+                        onClick={() => handleNavClick('staff')}
+                        className="w-full py-2 bg-[#242836] hover:bg-[#2E3345] text-[#8B92A5] hover:text-[#EAEDF3] rounded-lg text-xs font-semibold transition-colors"
+                      >
+                        + Add Staff Member
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================ */}
+          {/* TODAY'S LOG TAB                                                */}
+          {/* ============================================================ */}
+          {activeTab === 'today' && (
+            <div data-tutorial="today-log" className="space-y-4">
+              {/* Sub-header */}
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 bg-[rgba(0,184,148,0.15)] text-[#00B894] px-3 py-1 rounded-full text-sm font-semibold">
+                  <span className="w-2 h-2 bg-[#00B894] rounded-full animate-pulse inline-block" />
+                  {clockedInCount} on duty
+                </span>
+                <span className="text-[#5A6178] text-sm">
+                  {todayEvents.length} event{todayEvents.length !== 1 ? 's' : ''} today
+                </span>
               </div>
 
               {/* Event list */}
-              <div className="divide-y divide-[#2E3345]">
-                {todayEvents.length === 0 ? (
-                  <div className="px-6 py-16 flex flex-col items-center gap-3 text-center">
-                    <div className="w-16 h-16 bg-[#242836] rounded-2xl flex items-center justify-center text-3xl">
-                      🕐
-                    </div>
-                    <p className="font-semibold text-[#EAEDF3]">No clock events yet</p>
-                    <p className="text-sm text-[#5A6178] max-w-xs">
-                      When staff clock in on the iPad, their events will appear here in real time.
-                    </p>
-                  </div>
-                ) : (
-                  todayEvents.map((event: ClockEventRow) => (
-                    <div
-                      key={event.id}
-                      className="px-6 py-3.5 flex items-center gap-4 hover:bg-[#242836] transition-colors group"
-                    >
-                      {/* Photo thumbnail */}
-                      <button
-                        onClick={() =>
-                          event.photo_url &&
-                          setPhotoModal({
-                            url: event.photo_url,
-                            name: event.teachers?.name ?? 'Unknown',
-                            action: event.action,
-                            time: formatTime(event.timestamp),
-                          })
-                        }
-                        className="w-12 h-12 rounded-full overflow-hidden bg-[#242836] flex-shrink-0 ring-2 ring-transparent group-hover:ring-[#2E3345] transition-all"
-                        aria-label={`View photo for ${event.teachers?.name ?? 'Unknown'}`}
-                        disabled={!event.photo_url}
-                      >
-                        {event.photo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={event.photo_url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#5A6178]">
-                            <span className="text-lg">👤</span>
-                          </div>
-                        )}
-                      </button>
-
-                      {/* Name + time */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-[#EAEDF3] truncate">
-                          {event.teachers?.name ?? 'Unknown'}
-                        </p>
-                        <p className="text-xs text-[#5A6178] mt-0.5">
-                          {formatTime(event.timestamp)}
-                          <span className="mx-1">·</span>
-                          {getRelativeTime(event.timestamp)}
-                        </p>
+              <div className="bg-[#1A1D27] rounded-2xl border border-[#2E3345] overflow-hidden">
+                <div className="divide-y divide-[#2E3345]">
+                  {todayEvents.length === 0 ? (
+                    <div className="px-6 py-16 flex flex-col items-center gap-3 text-center">
+                      <div className="w-16 h-16 bg-[#242836] rounded-2xl flex items-center justify-center text-3xl">
+                        🕐
                       </div>
-
-                      {/* Badge */}
-                      {event.action === 'in' ? (
-                        <span className="inline-flex items-center gap-1.5 bg-[rgba(0,184,148,0.15)] text-[#00B894] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
-                          <span className="w-1.5 h-1.5 bg-[#00B894] rounded-full" />
-                          Clocked In
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 bg-[rgba(255,107,107,0.15)] text-[#FF6B6B] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
-                          <span className="w-1.5 h-1.5 bg-[#FF6B6B] rounded-full" />
-                          Clocked Out
-                        </span>
-                      )}
+                      <p className="font-semibold text-[#EAEDF3]">No clock events yet</p>
+                      <p className="text-sm text-[#5A6178] max-w-xs">
+                        When staff clock in on the iPad, their events will appear here in real time.
+                      </p>
                     </div>
-                  ))
-                )}
+                  ) : (
+                    todayEvents.map((event: ClockEventRow) => (
+                      <div
+                        key={event.id}
+                        className="px-6 py-3.5 flex items-center gap-4 hover:bg-[#242836] transition-colors group"
+                      >
+                        {/* Photo thumbnail */}
+                        <button
+                          onClick={() =>
+                            event.photo_url &&
+                            setPhotoModal({
+                              url: event.photo_url,
+                              name: event.teachers?.name ?? 'Unknown',
+                              action: event.action,
+                              time: formatTime(event.timestamp),
+                            })
+                          }
+                          className="w-12 h-12 rounded-full overflow-hidden bg-[#242836] flex-shrink-0 ring-2 ring-transparent group-hover:ring-[#2E3345] transition-all"
+                          aria-label={`View photo for ${event.teachers?.name ?? 'Unknown'}`}
+                          disabled={!event.photo_url}
+                        >
+                          {event.photo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={event.photo_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[#5A6178]">
+                              <span className="text-lg">👤</span>
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Name + time */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-[#EAEDF3] truncate">
+                            {event.teachers?.name ?? 'Unknown'}
+                          </p>
+                          <p className="text-xs text-[#5A6178] mt-0.5">
+                            {formatTime(event.timestamp)}
+                            <span className="mx-1">·</span>
+                            {getRelativeTime(event.timestamp)}
+                          </p>
+                        </div>
+
+                        {/* Badge */}
+                        {event.action === 'in' ? (
+                          <span className="inline-flex items-center gap-1.5 bg-[rgba(0,184,148,0.15)] text-[#00B894] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
+                            <span className="w-1.5 h-1.5 bg-[#00B894] rounded-full" />
+                            Clocked In
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 bg-[rgba(255,107,107,0.15)] text-[#FF6B6B] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
+                            <span className="w-1.5 h-1.5 bg-[#FF6B6B] rounded-full" />
+                            Clocked Out
+                          </span>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* WEEK VIEW */}
+          {/* ============================================================ */}
+          {/* WEEK VIEW TAB                                                  */}
+          {/* ============================================================ */}
           {activeTab === 'week' && (
-            <WeekView centerId={center.id} teachers={teachers} />
+            <div className="bg-[#1A1D27] rounded-2xl border border-[#2E3345] overflow-hidden">
+              <WeekView centerId={center.id} teachers={teachers} />
+            </div>
           )}
 
-          {/* EXPORT */}
+          {/* ============================================================ */}
+          {/* EXPORT TAB                                                     */}
+          {/* ============================================================ */}
           {activeTab === 'export' && (
-            <div className="p-6 space-y-5" data-tutorial="export">
+            <div className="space-y-5" data-tutorial="export">
               {/* Date range controls */}
-              <div>
-                <p className="text-sm font-semibold text-[#EAEDF3] mb-3">Date Range</p>
-                <div className="flex flex-wrap gap-2 mb-4">
+              <div className="bg-[#1A1D27] rounded-2xl border border-[#2E3345] p-6 space-y-4">
+                <p className="text-sm font-semibold text-[#EAEDF3]">Date Range</p>
+                <div className="flex flex-wrap gap-2">
                   {(['today', 'week', 'lastweek', 'payperiod'] as const).map(type => (
                     <button
                       key={type}
@@ -628,7 +940,7 @@ export default function AdminPage() {
                       onChange={e =>
                         setExportRange(prev => ({ ...prev, start: e.target.value }))
                       }
-                      className="px-3 py-2 bg-[#1A1D27] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] [color-scheme:dark]"
+                      className="px-3 py-2 bg-[#0F1117] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] [color-scheme:dark]"
                     />
                     <span className="text-[#5A6178] text-sm">→</span>
                     <input
@@ -637,7 +949,7 @@ export default function AdminPage() {
                       onChange={e =>
                         setExportRange(prev => ({ ...prev, end: e.target.value }))
                       }
-                      className="px-3 py-2 bg-[#1A1D27] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] [color-scheme:dark]"
+                      className="px-3 py-2 bg-[#0F1117] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] [color-scheme:dark]"
                     />
                   </div>
                   <button
@@ -659,12 +971,12 @@ export default function AdminPage() {
               {exportData && !exportLoading && (
                 <>
                   {/* Preview table */}
-                  <div className="rounded-xl border border-[#2E3345] overflow-hidden">
+                  <div className="bg-[#1A1D27] rounded-2xl border border-[#2E3345] overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="bg-[#1A1D27] border-b border-[#2E3345]">
-                            <th className="sticky left-0 bg-[#1A1D27] text-left py-3 px-4 text-[#8B92A5] font-semibold">
+                          <tr className="bg-[#141720] border-b border-[#2E3345]">
+                            <th className="sticky left-0 bg-[#141720] text-left py-3 px-4 text-[#8B92A5] font-semibold">
                               Teacher
                             </th>
                             {exportData.dates.map((d: string) => (
@@ -737,7 +1049,7 @@ export default function AdminPage() {
                   </div>
 
                   {/* Export buttons */}
-                  <div className="flex flex-wrap gap-3 pt-2 border-t border-[#2E3345]">
+                  <div className="flex flex-wrap gap-3">
                     <button
                       onClick={downloadCSV}
                       className="flex items-center gap-2 px-5 py-2.5 bg-[#00B894] text-white rounded-xl font-semibold hover:bg-[#00A884] transition-colors shadow-sm"
@@ -825,8 +1137,8 @@ export default function AdminPage() {
               )}
 
               {!exportData && !exportLoading && (
-                <div className="py-12 flex flex-col items-center gap-3 text-center">
-                  <div className="w-16 h-16 bg-[#242836] rounded-2xl flex items-center justify-center text-3xl">
+                <div className="py-16 flex flex-col items-center gap-3 text-center">
+                  <div className="w-16 h-16 bg-[#1A1D27] rounded-2xl flex items-center justify-center text-3xl border border-[#2E3345]">
                     📊
                   </div>
                   <p className="font-semibold text-[#EAEDF3]">No data loaded yet</p>
@@ -838,16 +1150,13 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* CAMERAS TAB */}
-          {activeTab === 'cameras' && center && (
-            <CameraTab centerId={center.id} showToast={showToast} />
-          )}
-
-          {/* STAFF TAB */}
+          {/* ============================================================ */}
+          {/* STAFF TAB                                                      */}
+          {/* ============================================================ */}
           {activeTab === 'staff' && (
-            <div className="p-6 space-y-5" data-tutorial="teachers">
+            <div className="space-y-5" data-tutorial="teachers">
               {/* Add teacher */}
-              <div data-tutorial="add-teacher">
+              <div data-tutorial="add-teacher" className="bg-[#1A1D27] rounded-2xl border border-[#2E3345] p-5">
                 <p className="text-sm font-semibold text-[#EAEDF3] mb-3">Add Staff Member</p>
                 <div className="flex gap-3">
                   <input
@@ -856,7 +1165,7 @@ export default function AdminPage() {
                     onChange={e => setNewTeacherName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && addTeacher()}
                     placeholder="Enter teacher name…"
-                    className="flex-1 px-4 py-2.5 bg-[#1A1D27] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] placeholder-[#5A6178]"
+                    className="flex-1 px-4 py-2.5 bg-[#0F1117] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] placeholder-[#5A6178]"
                   />
                   <button
                     onClick={addTeacher}
@@ -870,8 +1179,8 @@ export default function AdminPage() {
 
               {/* Staff cards grid */}
               {teachers.length === 0 ? (
-                <div className="py-12 flex flex-col items-center gap-3 text-center">
-                  <div className="w-16 h-16 bg-[#242836] rounded-2xl flex items-center justify-center text-3xl">
+                <div className="py-16 flex flex-col items-center gap-3 text-center">
+                  <div className="w-16 h-16 bg-[#1A1D27] rounded-2xl flex items-center justify-center text-3xl border border-[#2E3345]">
                     👥
                   </div>
                   <p className="font-semibold text-[#EAEDF3]">No staff yet</p>
@@ -880,10 +1189,9 @@ export default function AdminPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                   {teachers.map(teacher => {
                     const isOnDuty = clockedInTeacherIds.has(teacher.id)
-                    // Compute today's completed hours for this teacher
                     const teacherEvents = todayEvents.filter(
                       e => e.teacher_id === teacher.id
                     )
@@ -973,50 +1281,20 @@ export default function AdminPage() {
               )}
             </div>
           )}
-        </div>
 
-        {/* iPad Clock-In Link */}
-        <div className="rounded-2xl overflow-hidden shadow-sm">
-          <div
-            className="p-6"
-            style={{
-              background: 'linear-gradient(135deg, #00B894 0%, #00CEC9 100%)',
-            }}
-          >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">
-                📱
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-bold text-base mb-0.5">
-                  iPad Clock-In Screen
-                </p>
-                <p className="text-white/70 text-sm mb-3">
-                  Bookmark this URL on your iPad for the staff clock-in kiosk.
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 bg-white/20 text-white px-4 py-2.5 rounded-xl text-sm font-mono truncate backdrop-blur-sm">
-                    {typeof window !== 'undefined'
-                      ? `${window.location.origin}/c/${center.slug}/clockin`
-                      : `/c/${center.slug}/clockin`}
-                  </code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `${window.location.origin}/c/${center.slug}/clockin`
-                      )
-                      showToast('Link copied!')
-                    }}
-                    className="px-4 py-2.5 bg-white text-[#00B894] rounded-xl text-sm font-bold hover:bg-white/90 transition-colors flex-shrink-0"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
+          {/* ============================================================ */}
+          {/* CAMERAS TAB                                                    */}
+          {/* ============================================================ */}
+          {activeTab === 'cameras' && center && (
+            <CameraTab centerId={center.id} showToast={showToast} />
+          )}
+
+        </main>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* MODALS                                                               */}
+      {/* ------------------------------------------------------------------ */}
 
       {/* Photo lightbox modal */}
       {photoModal && (
@@ -1270,7 +1548,7 @@ function WeekView({ centerId }: WeekViewProps) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#1A1D27] border-b border-[#2E3345]">
+            <tr className="bg-[#141720] border-b border-[#2E3345]">
               <th className="text-left py-3 px-5 text-[#8B92A5] font-semibold">Staff</th>
               {weekData.dates.map((d: string) => {
                 const date = new Date(d + 'T00:00:00')
