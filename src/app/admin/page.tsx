@@ -18,8 +18,8 @@ interface ClockEventRow {
 }
 
 interface ExportDay {
-  clockIn: string
-  clockOut: string
+  clockIn: string | null
+  clockOut: string | null
   hours: number
   minutes: number
   decimal: number
@@ -27,7 +27,7 @@ interface ExportDay {
 
 interface ExportTeacherRow {
   teacher: string
-  days: Record<string, ExportDay>
+  days: Record<string, ExportDay | null>
   total: string
 }
 
@@ -106,7 +106,7 @@ interface StatCardProps {
 function StatCard({ icon, value, label, color, borderColor, bgColor }: StatCardProps) {
   return (
     <div
-      className={`bg-white rounded-2xl border border-[#E9EEF2] shadow-sm p-5 flex items-center gap-4 border-l-4`}
+      className={`bg-[#1A1D27] rounded-2xl border border-[#2E3345] shadow-sm p-5 flex items-center gap-4 border-l-4`}
       style={{ borderLeftColor: borderColor }}
     >
       <div
@@ -119,7 +119,7 @@ function StatCard({ icon, value, label, color, borderColor, bgColor }: StatCardP
         <p className="text-2xl font-bold leading-tight" style={{ color }}>
           {value}
         </p>
-        <p className="text-xs text-[#B2BEC3] font-medium mt-0.5">{label}</p>
+        <p className="text-xs text-[#8B92A5] font-medium mt-0.5">{label}</p>
       </div>
     </div>
   )
@@ -373,10 +373,10 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8F9FC] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0F1117] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-[#00B894] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[#636E72] text-sm font-medium">Loading dashboard…</p>
+          <p className="text-[#8B92A5] text-sm font-medium">Loading dashboard…</p>
         </div>
       </div>
     )
@@ -393,7 +393,7 @@ export default function AdminPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC]">
+    <div className="min-h-screen bg-[#0F1117]">
       {/* Toast notification */}
       {toast && (
         <div className="fixed top-4 right-4 z-[60] bg-[#00B894] text-white px-6 py-3 rounded-xl shadow-lg animate-fade-in font-medium flex items-center gap-2">
@@ -403,7 +403,7 @@ export default function AdminPage() {
       )}
 
       {/* Top bar */}
-      <header className="bg-white border-b border-[#E9EEF2] px-6 py-4 sticky top-0 z-30">
+      <header className="bg-[#1A1D27] border-b border-[#2E3345] px-6 py-4 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-[#00B894] rounded-lg flex items-center justify-center">
@@ -411,18 +411,18 @@ export default function AdminPage() {
             </div>
             <h1 className="text-xl font-bold">
               <span className="text-[#00B894]">TIK</span>
-              <span className="text-[#2D3436]">TIK</span>
-              <span className="text-[#B2BEC3] font-normal ml-2 text-base">Admin</span>
+              <span className="text-[#EAEDF3]">TIK</span>
+              <span className="text-[#5A6178] font-normal ml-2 text-base">Admin</span>
             </h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden sm:block text-right">
-              <p className="text-sm font-semibold text-[#2D3436]">{center.name}</p>
-              <p className="text-xs text-[#636E72]">{center.director_name}</p>
+              <p className="text-sm font-semibold text-[#EAEDF3]">{center.name}</p>
+              <p className="text-xs text-[#8B92A5]">{center.director_name}</p>
             </div>
             <button
               onClick={() => setShowSettings(true)}
-              className="w-9 h-9 rounded-full bg-[#F1F2F6] flex items-center justify-center hover:bg-[#E9EEF2] transition-colors text-base"
+              className="w-9 h-9 rounded-full bg-[#242836] flex items-center justify-center hover:bg-[#2E3345] transition-colors text-base"
               aria-label="Open settings"
             >
               ⚙️
@@ -441,7 +441,7 @@ export default function AdminPage() {
             label="On Duty"
             color="#00B894"
             borderColor="#00B894"
-            bgColor="#E8F8F5"
+            bgColor="rgba(0,184,148,0.15)"
           />
           <StatCard
             icon="👤"
@@ -449,7 +449,7 @@ export default function AdminPage() {
             label="Total Staff"
             color="#0984E3"
             borderColor="#0984E3"
-            bgColor="#EBF5FB"
+            bgColor="rgba(9,132,227,0.15)"
           />
           <StatCard
             icon="⏱"
@@ -457,7 +457,7 @@ export default function AdminPage() {
             label="Hours Today"
             color="#6C5CE7"
             borderColor="#6C5CE7"
-            bgColor="#F0EEFF"
+            bgColor="rgba(108,92,231,0.15)"
           />
           <StatCard
             icon="⚡"
@@ -465,13 +465,13 @@ export default function AdminPage() {
             label="Events Today"
             color="#FF9F43"
             borderColor="#FF9F43"
-            bgColor="#FFF5E6"
+            bgColor="rgba(255,159,67,0.15)"
           />
         </div>
 
         {/* Tab bar */}
-        <div className="bg-white rounded-2xl border border-[#E9EEF2] shadow-sm overflow-hidden">
-          <div className="flex border-b border-[#E9EEF2] overflow-x-auto">
+        <div className="bg-[#1A1D27] rounded-2xl border border-[#2E3345] shadow-sm overflow-hidden">
+          <div className="flex border-b border-[#2E3345] overflow-x-auto">
             {tabs.map(tab => (
               <button
                 key={tab.id}
@@ -481,8 +481,8 @@ export default function AdminPage() {
                 }}
                 className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-all border-b-2 -mb-px ${
                   activeTab === tab.id
-                    ? 'border-[#00B894] text-[#00B894] bg-[#F0FBF9]'
-                    : 'border-transparent text-[#636E72] hover:text-[#2D3436] hover:bg-[#F8F9FC]'
+                    ? 'border-[#00B894] text-[#00B894] bg-[rgba(0,184,148,0.08)]'
+                    : 'border-transparent text-[#8B92A5] hover:text-[#EAEDF3] hover:bg-[#242836]'
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -495,17 +495,17 @@ export default function AdminPage() {
           {activeTab === 'today' && (
             <div data-tutorial="today-log">
               {/* Sub-header */}
-              <div className="px-6 py-4 flex items-center justify-between border-b border-[#F1F2F6]">
+              <div className="px-6 py-4 flex items-center justify-between border-b border-[#2E3345]">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 bg-[#E8F8F5] text-[#00B894] px-3 py-1 rounded-full text-sm font-semibold">
+                  <span className="inline-flex items-center gap-1.5 bg-[rgba(0,184,148,0.15)] text-[#00B894] px-3 py-1 rounded-full text-sm font-semibold">
                     <span className="w-2 h-2 bg-[#00B894] rounded-full animate-pulse inline-block" />
                     {clockedInCount} on duty
                   </span>
-                  <span className="text-[#B2BEC3] text-sm hidden sm:inline">
+                  <span className="text-[#5A6178] text-sm hidden sm:inline">
                     · {todayEvents.length} event{todayEvents.length !== 1 ? 's' : ''} today
                   </span>
                 </div>
-                <p className="text-xs text-[#B2BEC3]">
+                <p className="text-xs text-[#5A6178]">
                   {new Date().toLocaleDateString('en-US', {
                     weekday: 'long',
                     month: 'long',
@@ -515,14 +515,14 @@ export default function AdminPage() {
               </div>
 
               {/* Event list */}
-              <div className="divide-y divide-[#F8F9FC]">
+              <div className="divide-y divide-[#2E3345]">
                 {todayEvents.length === 0 ? (
                   <div className="px-6 py-16 flex flex-col items-center gap-3 text-center">
-                    <div className="w-16 h-16 bg-[#F8F9FC] rounded-2xl flex items-center justify-center text-3xl">
+                    <div className="w-16 h-16 bg-[#242836] rounded-2xl flex items-center justify-center text-3xl">
                       🕐
                     </div>
-                    <p className="font-semibold text-[#2D3436]">No clock events yet</p>
-                    <p className="text-sm text-[#B2BEC3] max-w-xs">
+                    <p className="font-semibold text-[#EAEDF3]">No clock events yet</p>
+                    <p className="text-sm text-[#5A6178] max-w-xs">
                       When staff clock in on the iPad, their events will appear here in real time.
                     </p>
                   </div>
@@ -530,7 +530,7 @@ export default function AdminPage() {
                   todayEvents.map((event: ClockEventRow) => (
                     <div
                       key={event.id}
-                      className="px-6 py-3.5 flex items-center gap-4 hover:bg-[#F8F9FC] transition-colors group"
+                      className="px-6 py-3.5 flex items-center gap-4 hover:bg-[#242836] transition-colors group"
                     >
                       {/* Photo thumbnail */}
                       <button
@@ -543,7 +543,7 @@ export default function AdminPage() {
                             time: formatTime(event.timestamp),
                           })
                         }
-                        className="w-12 h-12 rounded-full overflow-hidden bg-[#F1F2F6] flex-shrink-0 ring-2 ring-transparent group-hover:ring-[#E9EEF2] transition-all"
+                        className="w-12 h-12 rounded-full overflow-hidden bg-[#242836] flex-shrink-0 ring-2 ring-transparent group-hover:ring-[#2E3345] transition-all"
                         aria-label={`View photo for ${event.teachers?.name ?? 'Unknown'}`}
                         disabled={!event.photo_url}
                       >
@@ -555,7 +555,7 @@ export default function AdminPage() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#B2BEC3]">
+                          <div className="w-full h-full flex items-center justify-center text-[#5A6178]">
                             <span className="text-lg">👤</span>
                           </div>
                         )}
@@ -563,10 +563,10 @@ export default function AdminPage() {
 
                       {/* Name + time */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-[#2D3436] truncate">
+                        <p className="font-semibold text-[#EAEDF3] truncate">
                           {event.teachers?.name ?? 'Unknown'}
                         </p>
-                        <p className="text-xs text-[#B2BEC3] mt-0.5">
+                        <p className="text-xs text-[#5A6178] mt-0.5">
                           {formatTime(event.timestamp)}
                           <span className="mx-1">·</span>
                           {getRelativeTime(event.timestamp)}
@@ -575,12 +575,12 @@ export default function AdminPage() {
 
                       {/* Badge */}
                       {event.action === 'in' ? (
-                        <span className="inline-flex items-center gap-1.5 bg-[#E8F8F5] text-[#00B894] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
+                        <span className="inline-flex items-center gap-1.5 bg-[rgba(0,184,148,0.15)] text-[#00B894] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
                           <span className="w-1.5 h-1.5 bg-[#00B894] rounded-full" />
                           Clocked In
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 bg-[#FFF0F0] text-[#FF6B6B] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
+                        <span className="inline-flex items-center gap-1.5 bg-[rgba(255,107,107,0.15)] text-[#FF6B6B] text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0">
                           <span className="w-1.5 h-1.5 bg-[#FF6B6B] rounded-full" />
                           Clocked Out
                         </span>
@@ -602,13 +602,13 @@ export default function AdminPage() {
             <div className="p-6 space-y-5" data-tutorial="export">
               {/* Date range controls */}
               <div>
-                <p className="text-sm font-semibold text-[#2D3436] mb-3">Date Range</p>
+                <p className="text-sm font-semibold text-[#EAEDF3] mb-3">Date Range</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {(['today', 'week', 'lastweek', 'payperiod'] as const).map(type => (
                     <button
                       key={type}
                       onClick={() => setQuickRange(type)}
-                      className="px-4 py-2 rounded-full text-sm font-medium bg-[#F1F2F6] text-[#636E72] hover:bg-[#E9EEF2] transition-colors"
+                      className="px-4 py-2 rounded-full text-sm font-medium bg-[#242836] text-[#8B92A5] hover:bg-[#2E3345] hover:text-[#EAEDF3] transition-colors"
                     >
                       {type === 'today'
                         ? 'Today'
@@ -628,16 +628,16 @@ export default function AdminPage() {
                       onChange={e =>
                         setExportRange(prev => ({ ...prev, start: e.target.value }))
                       }
-                      className="px-3 py-2 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
+                      className="px-3 py-2 bg-[#1A1D27] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] [color-scheme:dark]"
                     />
-                    <span className="text-[#B2BEC3] text-sm">→</span>
+                    <span className="text-[#5A6178] text-sm">→</span>
                     <input
                       type="date"
                       value={exportRange.end}
                       onChange={e =>
                         setExportRange(prev => ({ ...prev, end: e.target.value }))
                       }
-                      className="px-3 py-2 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
+                      className="px-3 py-2 bg-[#1A1D27] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] [color-scheme:dark]"
                     />
                   </div>
                   <button
@@ -652,25 +652,25 @@ export default function AdminPage() {
               {exportLoading && (
                 <div className="py-12 flex flex-col items-center gap-3">
                   <div className="w-8 h-8 border-4 border-[#00B894] border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm text-[#636E72]">Generating report…</p>
+                  <p className="text-sm text-[#8B92A5]">Generating report…</p>
                 </div>
               )}
 
               {exportData && !exportLoading && (
                 <>
                   {/* Preview table */}
-                  <div className="rounded-xl border border-[#E9EEF2] overflow-hidden">
+                  <div className="rounded-xl border border-[#2E3345] overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="bg-[#F8F9FC] border-b border-[#E9EEF2]">
-                            <th className="sticky left-0 bg-[#F8F9FC] text-left py-3 px-4 text-[#636E72] font-semibold">
+                          <tr className="bg-[#1A1D27] border-b border-[#2E3345]">
+                            <th className="sticky left-0 bg-[#1A1D27] text-left py-3 px-4 text-[#8B92A5] font-semibold">
                               Teacher
                             </th>
                             {exportData.dates.map((d: string) => (
                               <th
                                 key={d}
-                                className="text-center py-3 px-3 text-[#636E72] font-semibold whitespace-nowrap"
+                                className="text-center py-3 px-3 text-[#8B92A5] font-semibold whitespace-nowrap"
                               >
                                 {new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
                                   weekday: 'short',
@@ -679,7 +679,7 @@ export default function AdminPage() {
                                 })}
                               </th>
                             ))}
-                            <th className="text-right py-3 px-4 text-[#636E72] font-semibold">
+                            <th className="text-right py-3 px-4 text-[#8B92A5] font-semibold">
                               Total
                             </th>
                           </tr>
@@ -688,11 +688,11 @@ export default function AdminPage() {
                           {exportData.teachers.map((row: ExportTeacherRow, i: number) => (
                             <tr
                               key={row.teacher}
-                              className={`border-b border-[#F1F2F6] ${
-                                i % 2 === 1 ? 'bg-[#F8F9FC]' : 'bg-white'
+                              className={`border-b border-[#2E3345] ${
+                                i % 2 === 1 ? 'bg-[#171A23]' : 'bg-[#1A1D27]'
                               }`}
                             >
-                              <td className="py-3 px-4 font-semibold text-[#2D3436]">
+                              <td className="py-3 px-4 font-semibold text-[#EAEDF3]">
                                 {row.teacher}
                               </td>
                               {exportData.dates.map((d: string) => {
@@ -701,21 +701,21 @@ export default function AdminPage() {
                                   <td key={d} className="text-center py-3 px-3">
                                     {day ? (
                                       <div>
-                                        <div className="text-xs text-[#B2BEC3]">
+                                        <div className="text-xs text-[#5A6178]">
                                           {day.clockIn} – {day.clockOut || '...'}
                                         </div>
-                                        <div className="font-semibold text-[#2D3436] mt-0.5">
+                                        <div className="font-semibold text-[#EAEDF3] mt-0.5">
                                           {day.hours}h {day.minutes}m
                                         </div>
                                       </div>
                                     ) : (
-                                      <span className="text-[#E9EEF2] text-lg">—</span>
+                                      <span className="text-[#2E3345] text-lg">—</span>
                                     )}
                                   </td>
                                 )
                               })}
                               <td className="text-right py-3 px-4">
-                                <span className="bg-[#E8F8F5] text-[#00B894] font-bold px-3 py-1 rounded-full text-sm">
+                                <span className="bg-[rgba(0,184,148,0.15)] text-[#00B894] font-bold px-3 py-1 rounded-full text-sm">
                                   {row.total}h
                                 </span>
                               </td>
@@ -723,10 +723,10 @@ export default function AdminPage() {
                           ))}
                         </tbody>
                         <tfoot>
-                          <tr className="bg-[#2D3436]">
+                          <tr className="bg-[#242836]">
                             <td
                               colSpan={exportData.dates.length + 2}
-                              className="py-2 px-4 text-right text-xs text-[#636E72]"
+                              className="py-2 px-4 text-right text-xs text-[#5A6178]"
                             >
                               {exportData.teachers.length} staff · {exportData.dates.length} days
                             </td>
@@ -737,7 +737,7 @@ export default function AdminPage() {
                   </div>
 
                   {/* Export buttons */}
-                  <div className="flex flex-wrap gap-3 pt-2 border-t border-[#E9EEF2]">
+                  <div className="flex flex-wrap gap-3 pt-2 border-t border-[#2E3345]">
                     <button
                       onClick={downloadCSV}
                       className="flex items-center gap-2 px-5 py-2.5 bg-[#00B894] text-white rounded-xl font-semibold hover:bg-[#00A884] transition-colors shadow-sm"
@@ -808,14 +808,14 @@ export default function AdminPage() {
                           })
                         })
                       }}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-white text-[#2D3436] border border-[#E9EEF2] rounded-xl font-semibold hover:bg-[#F1F2F6] transition-colors shadow-sm"
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#242836] text-[#EAEDF3] border border-[#2E3345] rounded-xl font-semibold hover:bg-[#2E3345] transition-colors shadow-sm"
                     >
                       <span>📄</span>
                       <span>Download PDF</span>
                     </button>
                     <button
                       onClick={copyToClipboard}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-white text-[#2D3436] border border-[#E9EEF2] rounded-xl font-semibold hover:bg-[#F1F2F6] transition-colors shadow-sm"
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#242836] text-[#EAEDF3] border border-[#2E3345] rounded-xl font-semibold hover:bg-[#2E3345] transition-colors shadow-sm"
                     >
                       <span>📋</span>
                       <span>Copy to Clipboard</span>
@@ -826,11 +826,11 @@ export default function AdminPage() {
 
               {!exportData && !exportLoading && (
                 <div className="py-12 flex flex-col items-center gap-3 text-center">
-                  <div className="w-16 h-16 bg-[#F8F9FC] rounded-2xl flex items-center justify-center text-3xl">
+                  <div className="w-16 h-16 bg-[#242836] rounded-2xl flex items-center justify-center text-3xl">
                     📊
                   </div>
-                  <p className="font-semibold text-[#2D3436]">No data loaded yet</p>
-                  <p className="text-sm text-[#B2BEC3]">
+                  <p className="font-semibold text-[#EAEDF3]">No data loaded yet</p>
+                  <p className="text-sm text-[#5A6178]">
                     Select a date range above and click Preview.
                   </p>
                 </div>
@@ -848,7 +848,7 @@ export default function AdminPage() {
             <div className="p-6 space-y-5" data-tutorial="teachers">
               {/* Add teacher */}
               <div data-tutorial="add-teacher">
-                <p className="text-sm font-semibold text-[#2D3436] mb-3">Add Staff Member</p>
+                <p className="text-sm font-semibold text-[#EAEDF3] mb-3">Add Staff Member</p>
                 <div className="flex gap-3">
                   <input
                     type="text"
@@ -856,7 +856,7 @@ export default function AdminPage() {
                     onChange={e => setNewTeacherName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && addTeacher()}
                     placeholder="Enter teacher name…"
-                    className="flex-1 px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] placeholder-[#B2BEC3]"
+                    className="flex-1 px-4 py-2.5 bg-[#1A1D27] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894] placeholder-[#5A6178]"
                   />
                   <button
                     onClick={addTeacher}
@@ -871,11 +871,11 @@ export default function AdminPage() {
               {/* Staff cards grid */}
               {teachers.length === 0 ? (
                 <div className="py-12 flex flex-col items-center gap-3 text-center">
-                  <div className="w-16 h-16 bg-[#F8F9FC] rounded-2xl flex items-center justify-center text-3xl">
+                  <div className="w-16 h-16 bg-[#242836] rounded-2xl flex items-center justify-center text-3xl">
                     👥
                   </div>
-                  <p className="font-semibold text-[#2D3436]">No staff yet</p>
-                  <p className="text-sm text-[#B2BEC3]">
+                  <p className="font-semibold text-[#EAEDF3]">No staff yet</p>
+                  <p className="text-sm text-[#5A6178]">
                     Add your first team member above to get started.
                   </p>
                 </div>
@@ -909,7 +909,7 @@ export default function AdminPage() {
                     return (
                       <div
                         key={teacher.id}
-                        className="bg-[#F8F9FC] rounded-2xl border border-[#E9EEF2] p-4 flex items-center gap-4"
+                        className="bg-[#1A1D27] rounded-2xl border border-[#2E3345] p-4 flex items-center gap-4"
                       >
                         {/* Color avatar */}
                         <div
@@ -921,22 +921,22 @@ export default function AdminPage() {
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[#2D3436] truncate">
+                          <p className="font-semibold text-[#EAEDF3] truncate">
                             {teacher.name}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             {isOnDuty ? (
-                              <span className="inline-flex items-center gap-1 bg-[#E8F8F5] text-[#00B894] text-xs font-semibold px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 bg-[rgba(0,184,148,0.15)] text-[#00B894] text-xs font-semibold px-2 py-0.5 rounded-full">
                                 <span className="w-1.5 h-1.5 bg-[#00B894] rounded-full animate-pulse" />
                                 On Duty
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 bg-[#F1F2F6] text-[#B2BEC3] text-xs font-semibold px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 bg-[#242836] text-[#5A6178] text-xs font-semibold px-2 py-0.5 rounded-full">
                                 Off Duty
                               </span>
                             )}
                             {completedMins > 0 && (
-                              <span className="text-xs text-[#636E72]">
+                              <span className="text-xs text-[#8B92A5]">
                                 {formatMinutes(completedMins)} today
                               </span>
                             )}
@@ -948,8 +948,8 @@ export default function AdminPage() {
                           onClick={() => setEnrollingTeacher(teacher)}
                           className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors flex-shrink-0 ${
                             (teacher as Teacher & { face_descriptors?: unknown[] }).face_descriptors?.length
-                              ? 'bg-[#E8F8F5] text-[#00B894] hover:bg-[#D1F2EB]'
-                              : 'bg-[#FFF3E0] text-[#FF9F43] hover:bg-[#FFE8CC]'
+                              ? 'bg-[rgba(0,184,148,0.15)] text-[#00B894] hover:bg-[rgba(0,184,148,0.25)]'
+                              : 'bg-[rgba(255,159,67,0.15)] text-[#FF9F43] hover:bg-[rgba(255,159,67,0.25)]'
                           }`}
                           aria-label={`Enroll face for ${teacher.name}`}
                         >
@@ -961,7 +961,7 @@ export default function AdminPage() {
                         {/* Remove */}
                         <button
                           onClick={() => removeTeacher(teacher.id, teacher.name)}
-                          className="text-[#B2BEC3] hover:text-[#FF6B6B] transition-colors text-lg flex-shrink-0"
+                          className="text-[#5A6178] hover:text-[#FF6B6B] transition-colors text-lg flex-shrink-0"
                           aria-label={`Remove ${teacher.name}`}
                         >
                           ×
@@ -1025,14 +1025,14 @@ export default function AdminPage() {
           onClick={() => setPhotoModal(null)}
         >
           <div
-            className="bg-white rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl"
+            className="bg-[#1A1D27] rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photoModal.url} alt="" className="w-full aspect-video object-cover" />
             <div className="p-5 flex items-center justify-between">
               <div>
-                <p className="font-bold text-[#2D3436] text-base">{photoModal.name}</p>
+                <p className="font-bold text-[#EAEDF3] text-base">{photoModal.name}</p>
                 <p
                   className={`text-sm font-medium mt-0.5 ${
                     photoModal.action === 'in' ? 'text-[#00B894]' : 'text-[#FF6B6B]'
@@ -1043,7 +1043,7 @@ export default function AdminPage() {
               </div>
               <button
                 onClick={() => setPhotoModal(null)}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F1F2F6] text-[#636E72] hover:bg-[#E9EEF2] transition-colors font-medium"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#242836] text-[#8B92A5] hover:bg-[#2E3345] transition-colors font-medium"
                 aria-label="Close photo"
               >
                 ✕
@@ -1060,14 +1060,14 @@ export default function AdminPage() {
           onClick={() => setShowSettings(false)}
         >
           <div
-            className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+            className="bg-[#242836] rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[#2D3436]">Settings</h2>
+              <h2 className="text-lg font-bold text-[#EAEDF3]">Settings</h2>
               <button
                 onClick={() => setShowSettings(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#F1F2F6] text-[#636E72] hover:bg-[#E9EEF2] transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1A1D27] text-[#8B92A5] hover:bg-[#2E3345] transition-colors"
                 aria-label="Close settings"
               >
                 ✕
@@ -1075,17 +1075,17 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-[#636E72] mb-1.5">
+              <label className="block text-sm font-semibold text-[#8B92A5] mb-1.5">
                 Center Name
               </label>
               <input
                 value={settingsForm.name}
                 onChange={e => setSettingsForm(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
+                className="w-full px-4 py-2.5 bg-[#1A1D27] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#636E72] mb-1.5">
+              <label className="block text-sm font-semibold text-[#8B92A5] mb-1.5">
                 Director Name
               </label>
               <input
@@ -1093,11 +1093,11 @@ export default function AdminPage() {
                 onChange={e =>
                   setSettingsForm(prev => ({ ...prev, director_name: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
+                className="w-full px-4 py-2.5 bg-[#1A1D27] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#636E72] mb-1.5">
+              <label className="block text-sm font-semibold text-[#8B92A5] mb-1.5">
                 Email
               </label>
               <input
@@ -1105,7 +1105,7 @@ export default function AdminPage() {
                 onChange={e =>
                   setSettingsForm(prev => ({ ...prev, email: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 border border-[#E9EEF2] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
+                className="w-full px-4 py-2.5 bg-[#1A1D27] border border-[#2E3345] rounded-xl text-sm text-[#EAEDF3] focus:outline-none focus:ring-2 focus:ring-[#00B894]/30 focus:border-[#00B894]"
               />
             </div>
 
@@ -1118,16 +1118,16 @@ export default function AdminPage() {
               </button>
               <button
                 onClick={() => setShowSettings(false)}
-                className="px-5 py-2.5 bg-[#F1F2F6] text-[#636E72] rounded-xl font-semibold hover:bg-[#E9EEF2] transition-colors"
+                className="px-5 py-2.5 bg-[#1A1D27] text-[#8B92A5] rounded-xl font-semibold hover:bg-[#2E3345] transition-colors"
               >
                 Cancel
               </button>
             </div>
 
-            <hr className="border-[#E9EEF2]" />
+            <hr className="border-[#2E3345]" />
 
             <div>
-              <p className="text-xs font-semibold text-[#B2BEC3] uppercase tracking-wider mb-3">
+              <p className="text-xs font-semibold text-[#5A6178] uppercase tracking-wider mb-3">
                 Danger Zone
               </p>
               {!deleteConfirm ? (
@@ -1138,7 +1138,7 @@ export default function AdminPage() {
                   Delete All Data
                 </button>
               ) : (
-                <div className="bg-[#FF6B6B]/10 border border-[#FF6B6B]/20 p-4 rounded-xl">
+                <div className="bg-[rgba(255,107,107,0.1)] border border-[rgba(255,107,107,0.2)] p-4 rounded-xl">
                   <p className="text-sm text-[#FF6B6B] font-semibold mb-3">
                     Are you absolutely sure? This cannot be undone.
                   </p>
@@ -1148,7 +1148,7 @@ export default function AdminPage() {
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(false)}
-                      className="px-4 py-2 bg-white border border-[#E9EEF2] rounded-lg text-sm font-medium hover:bg-[#F8F9FC] transition-colors"
+                      className="px-4 py-2 bg-[#1A1D27] border border-[#2E3345] rounded-lg text-sm font-medium text-[#8B92A5] hover:bg-[#2E3345] transition-colors"
                     >
                       Cancel
                     </button>
@@ -1235,18 +1235,18 @@ function WeekView({ centerId }: WeekViewProps) {
     return (
       <div className="py-12 flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-4 border-[#00B894] border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-[#636E72]">Loading week view…</p>
+        <p className="text-sm text-[#8B92A5]">Loading week view…</p>
       </div>
     )
   }
 
   if (!weekData) return null
 
-  // Compute totals per teacher
+  // Compute totals per teacher — filter null days to prevent crash
   const teacherTotals: Record<string, number> = {}
   for (const row of weekData.teachers) {
     let mins = 0
-    for (const day of Object.values(row.days)) {
+    for (const day of Object.values(row.days).filter(Boolean) as ExportDay[]) {
       mins += day.hours * 60 + day.minutes
     }
     teacherTotals[row.teacher] = mins
@@ -1254,10 +1254,10 @@ function WeekView({ centerId }: WeekViewProps) {
 
   return (
     <div>
-      <div className="px-6 py-4 border-b border-[#F1F2F6]">
-        <p className="text-sm text-[#636E72]">
+      <div className="px-6 py-4 border-b border-[#2E3345]">
+        <p className="text-sm text-[#8B92A5]">
           Week of{' '}
-          <span className="font-semibold text-[#2D3436]">
+          <span className="font-semibold text-[#EAEDF3]">
             {weekData.dates.length > 0
               ? new Date(weekData.dates[0] + 'T00:00:00').toLocaleDateString('en-US', {
                   month: 'long',
@@ -1270,8 +1270,8 @@ function WeekView({ centerId }: WeekViewProps) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#F8F9FC] border-b border-[#E9EEF2]">
-              <th className="text-left py-3 px-5 text-[#636E72] font-semibold">Staff</th>
+            <tr className="bg-[#1A1D27] border-b border-[#2E3345]">
+              <th className="text-left py-3 px-5 text-[#8B92A5] font-semibold">Staff</th>
               {weekData.dates.map((d: string) => {
                 const date = new Date(d + 'T00:00:00')
                 const isToday = getDateString() === d
@@ -1279,7 +1279,7 @@ function WeekView({ centerId }: WeekViewProps) {
                   <th
                     key={d}
                     className={`text-center py-3 px-3 font-semibold ${
-                      isToday ? 'text-[#00B894]' : 'text-[#636E72]'
+                      isToday ? 'text-[#00B894]' : 'text-[#8B92A5]'
                     }`}
                   >
                     <div>{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
@@ -1289,33 +1289,33 @@ function WeekView({ centerId }: WeekViewProps) {
                   </th>
                 )
               })}
-              <th className="text-right py-3 px-5 text-[#636E72] font-semibold">Total</th>
+              <th className="text-right py-3 px-5 text-[#8B92A5] font-semibold">Total</th>
             </tr>
           </thead>
           <tbody>
             {weekData.teachers.map((row: ExportTeacherRow, i: number) => (
               <tr
                 key={row.teacher}
-                className={`border-b border-[#F8F9FC] ${
-                  i % 2 === 1 ? 'bg-[#F8F9FC]' : 'bg-white'
+                className={`border-b border-[#2E3345] ${
+                  i % 2 === 1 ? 'bg-[#171A23]' : 'bg-[#1A1D27]'
                 }`}
               >
-                <td className="py-3.5 px-5 font-semibold text-[#2D3436]">{row.teacher}</td>
+                <td className="py-3.5 px-5 font-semibold text-[#EAEDF3]">{row.teacher}</td>
                 {weekData.dates.map((d: string) => {
                   const day = row.days[d]
                   return (
                     <td key={d} className="text-center py-3.5 px-3">
                       {day ? (
                         <div className="flex flex-col items-center gap-1">
-                          <span className="inline-flex items-center gap-1 bg-[#E8F8F5] text-[#00B894] text-xs font-semibold px-2.5 py-1 rounded-full">
+                          <span className="inline-flex items-center gap-1 bg-[rgba(0,184,148,0.15)] text-[#00B894] text-xs font-semibold px-2.5 py-1 rounded-full">
                             {day.hours}h {day.minutes}m
                           </span>
-                          <span className="text-xs text-[#B2BEC3]">
+                          <span className="text-xs text-[#5A6178]">
                             {day.clockIn}–{day.clockOut || '…'}
                           </span>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center justify-center w-7 h-7 bg-[#FFF0F0] text-[#FF6B6B] rounded-full text-xs font-bold">
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-[rgba(255,107,107,0.1)] text-[#FF6B6B] rounded-full text-xs font-bold">
                           –
                         </span>
                       )}
@@ -1323,7 +1323,7 @@ function WeekView({ centerId }: WeekViewProps) {
                   )
                 })}
                 <td className="text-right py-3.5 px-5">
-                  <span className="bg-[#2D3436] text-white font-bold px-3 py-1 rounded-full text-xs">
+                  <span className="bg-[#242836] text-[#EAEDF3] font-bold px-3 py-1 rounded-full text-xs">
                     {row.total}h
                   </span>
                 </td>
@@ -1332,8 +1332,8 @@ function WeekView({ centerId }: WeekViewProps) {
           </tbody>
           {weekData.teachers.length > 0 && (
             <tfoot>
-              <tr className="bg-[#F8F9FC] border-t-2 border-[#E9EEF2]">
-                <td className="py-3 px-5 text-xs font-bold text-[#636E72] uppercase tracking-wider">
+              <tr className="bg-[#1A1D27] border-t-2 border-[#2E3345]">
+                <td className="py-3 px-5 text-xs font-bold text-[#5A6178] uppercase tracking-wider">
                   Summary
                 </td>
                 {weekData.dates.map((d: string) => {
@@ -1344,11 +1344,11 @@ function WeekView({ centerId }: WeekViewProps) {
                   return (
                     <td key={d} className="text-center py-3 px-3">
                       {dayTotal > 0 ? (
-                        <span className="text-xs font-semibold text-[#636E72]">
+                        <span className="text-xs font-semibold text-[#8B92A5]">
                           {Math.floor(dayTotal / 60)}h {dayTotal % 60}m
                         </span>
                       ) : (
-                        <span className="text-[#E9EEF2] text-xs">—</span>
+                        <span className="text-[#2E3345] text-xs">—</span>
                       )}
                     </td>
                   )
