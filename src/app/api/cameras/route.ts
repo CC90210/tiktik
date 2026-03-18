@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 // Columns returned to the frontend — rtsp_password is intentionally excluded
 const CAMERA_SELECT =
-  'id, center_id, name, location, rtsp_url, rtsp_username, channel, subtype, enabled, proxy_stream_name, created_at'
+  'id, center_id, name, location, camera_brand, rtsp_url, rtsp_username, channel, subtype, enabled, proxy_stream_name, created_at'
 
 function buildProxyStreamName(centerId: string, channel: number): string {
   // e.g. center_abc123_cam_1  (UUIDs contain hyphens — replace for safe stream names)
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Center not found' }, { status: 404 })
     }
 
-    const { name, location, rtsp_url, rtsp_username, rtsp_password, channel, subtype } =
+    const { name, location, camera_brand, rtsp_url, rtsp_username, rtsp_password, channel, subtype } =
       await request.json()
 
     if (!name) {
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
         center_id: center.id,
         name,
         location: location ?? null,
+        camera_brand: camera_brand ?? null,
         rtsp_url: rtsp_url ?? null,
         rtsp_username: rtsp_username ?? null,
         rtsp_password: rtsp_password ?? null,

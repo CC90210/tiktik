@@ -49,6 +49,7 @@ export interface Camera {
   center_id: string
   name: string
   location: string
+  camera_brand: string | null
   rtsp_url: string | null
   rtsp_username: string | null
   channel: number
