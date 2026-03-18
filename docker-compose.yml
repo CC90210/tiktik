@@ -1,0 +1,22 @@
+# TIKTIK Camera Proxy — go2rtc
+# Converts Lorex RTSP camera feeds to WebRTC for browser viewing
+#
+# Usage:
+#   1. Set GO2RTC_API_KEY in .env.local
+#   2. Run: docker compose up -d
+#   3. go2rtc auto-fetches camera configs from TIKTIK API
+#   4. Access go2rtc dashboard: http://localhost:1984
+
+services:
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    container_name: tiktik-camera-proxy
+    ports:
+      - "1984:1984"   # Web UI + API
+      - "8554:8554"   # RTSP relay
+      - "8555:8555/tcp" # WebRTC (TCP)
+      - "8555:8555/udp" # WebRTC (UDP)
+    volumes:
+      - ./go2rtc.yaml:/config/go2rtc.yaml
+    network_mode: host  # Required for RTSP access on local network
+    restart: unless-stopped
